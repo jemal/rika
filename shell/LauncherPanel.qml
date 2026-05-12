@@ -98,9 +98,12 @@ Rectangle {
 
       Text {
         anchors.centerIn: parent
-        text: "No results"
-        color: root.launcher.mutedTextColor
+        width: parent.width - 32
+        horizontalAlignment: Text.AlignHCenter
+        text: root.launcher.ipcError.length > 0 ? root.launcher.ipcError : "No results"
+        color: root.launcher.ipcError.length > 0 ? "#ffb4ab" : root.launcher.mutedTextColor
         font.pixelSize: 15
+        wrapMode: Text.Wrap
         visible: results.count === 0
       }
     }

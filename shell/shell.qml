@@ -25,6 +25,7 @@ PanelWindow {
 
   function sendQuery(text) {
     requestId += 1;
+    ipcError = "";
     ipc.sendQuery(requestId, text);
   }
 
@@ -65,11 +66,15 @@ PanelWindow {
   WlrLayershell.layer: WlrLayer.Overlay
   WlrLayershell.exclusionMode: ExclusionMode.Ignore
 
-  Component.onCompleted: panel.focusSearchInput()
+  Component.onCompleted: {
+    panel.focusSearchInput();
+    sendQuery(query);
+  }
 
   onOpenChanged: {
     if (open) {
       panel.focusSearchInput();
+      sendQuery(query);
     }
   }
 
