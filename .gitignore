@@ -1,5 +1,6 @@
 *
 !.gitignore
+!.qmllint.ini
 
 !.rustfmt.toml
 
@@ -12,6 +13,10 @@
 !docs/
 !docs/**/
 !docs/**/*.md
+
+!shell/
+!shell/**/
+!shell/**/*.qml
 
 !src/
 !src/**/
