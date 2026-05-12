@@ -72,14 +72,28 @@ Rectangle {
       }
     }
 
-    Text {
-      Layout.preferredWidth: 92
+    ColumnLayout {
+      Layout.preferredWidth: 112
       Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-      horizontalAlignment: Text.AlignRight
-      text: root.result.kind
-      color: "#a9bddc"
-      font.pixelSize: 12
-      elide: Text.ElideRight
+      spacing: 2
+
+      Text {
+        Layout.fillWidth: true
+        horizontalAlignment: Text.AlignRight
+        text: root.result.provider
+        color: "#a9bddc"
+        font.pixelSize: 12
+        elide: Text.ElideRight
+      }
+
+      Text {
+        Layout.fillWidth: true
+        horizontalAlignment: Text.AlignRight
+        text: root.result.actions.length > 0 ? root.result.actions[0] : ""
+        color: root.launcher.mutedTextColor
+        font.pixelSize: 11
+        elide: Text.ElideRight
+      }
     }
   }
 

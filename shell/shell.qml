@@ -26,7 +26,6 @@ PanelWindow {
       "provider": "projects",
       "title": "Rika",
       "subtitle": "~/dev/personal/rika",
-      "kind": "project",
       "icon": "R",
       "score": 1.0,
       "actions": ["open", "open-terminal"]
@@ -36,7 +35,6 @@ PanelWindow {
       "provider": "apps",
       "title": "WezTerm",
       "subtitle": "GPU-accelerated terminal emulator",
-      "kind": "app",
       "icon": "W",
       "score": 0.92,
       "actions": ["launch"]
@@ -46,7 +44,6 @@ PanelWindow {
       "provider": "bangs",
       "title": "Search GitHub",
       "subtitle": "!gh quickshell",
-      "kind": "web",
       "icon": "G",
       "score": 0.84,
       "actions": ["open"]
@@ -56,7 +53,6 @@ PanelWindow {
       "provider": "commands",
       "title": "Open notes",
       "subtitle": "ghostty -e nvim ~/documents/notes",
-      "kind": "command",
       "icon": ">",
       "score": 0.78,
       "actions": ["run"]
@@ -72,8 +68,7 @@ PanelWindow {
 
     return result.title.toLowerCase().includes(needle)
       || result.subtitle.toLowerCase().includes(needle)
-      || result.provider.toLowerCase().includes(needle)
-      || result.kind.toLowerCase().includes(needle);
+      || result.provider.toLowerCase().includes(needle);
   }
 
   function filteredResults() {
