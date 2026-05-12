@@ -10,6 +10,9 @@ PanelWindow {
   property bool open: true
   property int selectedIndex: 0
   property string query: ""
+  property var results: []
+  property int requestId: 0
+  property string ipcError: ""
 
   readonly property color dimColor: Qt.alpha("#0c0f14", 0.46)
   readonly property color surfaceColor: "#111318"
@@ -20,59 +23,13 @@ PanelWindow {
   readonly property color textColor: "#f4f7fb"
   readonly property color mutedTextColor: "#9aa3b2"
 
-  property var allResults: [
-    {
-      "id": "project:/home/jemal/dev/personal/rika",
-      "provider": "projects",
-      "title": "Rika",
-      "subtitle": "~/dev/personal/rika",
-      "icon": "R",
-      "score": 1.0,
-      "actions": ["open", "open-terminal"]
-    },
-    {
-      "id": "app:org.wezfurlong.wezterm",
-      "provider": "apps",
-      "title": "WezTerm",
-      "subtitle": "GPU-accelerated terminal emulator",
-      "icon": "W",
-      "score": 0.92,
-      "actions": ["launch"]
-    },
-    {
-      "id": "bang:github:quickshell",
-      "provider": "bangs",
-      "title": "Search GitHub",
-      "subtitle": "!gh quickshell",
-      "icon": "G",
-      "score": 0.84,
-      "actions": ["open"]
-    },
-    {
-      "id": "command:open-notes",
-      "provider": "commands",
-      "title": "Open notes",
-      "subtitle": "ghostty -e nvim ~/documents/notes",
-      "icon": ">",
-      "score": 0.78,
-      "actions": ["run"]
-    }
-  ]
-
-  function matches(result) {
-    const needle = query.trim().toLowerCase();
-
-    if (needle.length === 0) {
-      return true;
-    }
-
-    return result.title.toLowerCase().includes(needle)
-      || result.subtitle.toLowerCase().includes(needle)
-      || result.provider.toLowerCase().includes(needle);
+  function sendQuery(text) {
+    requestId += 1;
+    ipc.sendQuery(requestId, text);
   }
 
   function filteredResults() {
-    return allResults.filter(matches);
+    return results;
   }
 
   function clampSelection() {
@@ -88,7 +45,8 @@ PanelWindow {
     }
 
     const result = results[selectedIndex];
-    console.log(`activate provider=${result.provider} id=${result.id} action=${result.actions[0]}`);
+    const action = result.actions.length > 0 ? result.actions[0] : "open";
+    ipc.activate(result.provider, result.id, action);
     open = false;
   }
 
@@ -112,6 +70,27 @@ PanelWindow {
   onOpenChanged: {
     if (open) {
       panel.focusSearchInput();
+    }
+  }
+
+  LauncherClient {
+    id: ipc
+
+    socketPath: `${Quickshell.env("XDG_RUNTIME_DIR")}/rika-launcher.sock`
+
+    onResultsReceived: (responseRequestId, items) => {
+      if (responseRequestId !== launcher.requestId) {
+        return;
+      }
+
+      launcher.results = items;
+      launcher.selectedIndex = 0;
+      launcher.ipcError = "";
+    }
+
+    onErrorReceived: message => {
+      launcher.results = [];
+      launcher.ipcError = message;
     }
   }
 

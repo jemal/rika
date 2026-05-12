@@ -51,6 +51,7 @@ Rectangle {
         onTextChanged: {
           root.launcher.query = text;
           root.launcher.selectedIndex = 0;
+          root.launcher.sendQuery(text);
         }
 
         Keys.onPressed: event => {

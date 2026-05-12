@@ -3,6 +3,8 @@ mod provider;
 use std::{
     io::{
         self,
+        BufRead,
+        BufReader,
         Write,
     },
     os::unix::net::{
@@ -89,30 +91,42 @@ fn main() {
 }
 
 fn handle_client_request(stream: &mut UnixStream, provider: &MockProvider) -> anyhow::Result<()> {
-    let request: ClientRequest = serde_json::from_reader(&mut *stream)?;
-    match request {
-        ClientRequest::Query { request_id, query } => {
-            let results = provider.search(&query);
+    let reader_stream = stream.try_clone()?;
+    let mut reader = BufReader::new(reader_stream);
+    let mut line = String::new();
 
-            let response = ServerResponse::Results {
-                request_id,
-                items: results,
-            };
+    loop {
+        line.clear();
 
-            write_response(stream, &response)?;
+        if reader.read_line(&mut line)? == 0 {
+            break;
         }
-        ClientRequest::Activate {
-            provider,
-            id,
-            action,
-        } => {
-            let response = ServerResponse::Activated {
+
+        let request: ClientRequest = serde_json::from_str(&line)?;
+        match request {
+            ClientRequest::Query { request_id, query } => {
+                let results = provider.search(&query);
+
+                let response = ServerResponse::Results {
+                    request_id,
+                    items: results,
+                };
+
+                write_response(stream, &response)?;
+            }
+            ClientRequest::Activate {
                 provider,
                 id,
                 action,
-            };
+            } => {
+                let response = ServerResponse::Activated {
+                    provider,
+                    id,
+                    action,
+                };
 
-            write_response(stream, &response)?;
+                write_response(stream, &response)?;
+            }
         }
     }
 
