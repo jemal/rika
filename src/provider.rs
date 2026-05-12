@@ -1,17 +1,19 @@
+use serde::Serialize;
+
 pub trait Provider {
     fn id(&self) -> &'static str;
-
     fn search(&self, query: &str) -> Vec<SearchResult>;
 }
 
+#[derive(Serialize)]
 pub struct SearchResult {
-    pub title: String,
+    pub id: String,
     pub provider: &'static str,
-    pub action: Action,
-}
-
-pub enum Action {
-    Echo(String),
+    pub title: String,
+    pub subtitle: String,
+    pub icon: String,
+    pub score: f32,
+    pub actions: Vec<String>,
 }
 
 pub struct MockProvider {
@@ -37,9 +39,13 @@ impl Provider for MockProvider {
         for entry in &self.entries {
             if entry.contains(query) {
                 results.push(SearchResult {
-                    title: entry.to_string(),
+                    id: format!("mock:{entry}"),
                     provider: self.id(),
-                    action: Action::Echo(format!("exec action for '{}'", entry)),
+                    title: entry.to_string(),
+                    subtitle: entry.to_string(),
+                    icon: "!".to_string(),
+                    score: 1.0,
+                    actions: vec!["open".to_string(), "open-terminal".to_string()],
                 });
             }
         }

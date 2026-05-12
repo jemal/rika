@@ -48,12 +48,17 @@
         ];
 
         qmlImportPath = "${pkgs.qt6.qtdeclarative}/lib/qt-6/qml:${pkgs.quickshell}/lib/qt-6/qml";
+
+        shellHook = ''
+          export RIKA_LAUNCHER_SOCKET="$XDG_RUNTIME_DIR/rika-launcher.sock"
+        '';
       in
       {
         devShell = pkgs.mkShell {
           packages = devPackages;
 
-          RIKA_LAUNCHER_SOCKET = "$XDG_RUNTIME_DIR/rika-launcher.sock";
+          inherit shellHook;
+
           QML_IMPORT_PATH = qmlImportPath;
           QML2_IMPORT_PATH = qmlImportPath;
         };
@@ -61,7 +66,8 @@
         devShells.default = pkgs.mkShell {
           packages = devPackages;
 
-          RIKA_LAUNCHER_SOCKET = "$XDG_RUNTIME_DIR/rika-launcher.sock";
+          inherit shellHook;
+
           QML_IMPORT_PATH = qmlImportPath;
           QML2_IMPORT_PATH = qmlImportPath;
         };
