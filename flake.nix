@@ -12,7 +12,9 @@
 
   outputs =
     inputs:
-    inputs.flake-utils.lib.eachDefaultSystem (
+    inputs.flake-utils.lib.eachSystem [
+      "x86_64-linux"
+    ] (
       system:
       let
         pkgs = import inputs.nixpkgs {
@@ -54,15 +56,6 @@
         '';
       in
       {
-        devShell = pkgs.mkShell {
-          packages = devPackages;
-
-          inherit shellHook;
-
-          QML_IMPORT_PATH = qmlImportPath;
-          QML2_IMPORT_PATH = qmlImportPath;
-        };
-
         devShells.default = pkgs.mkShell {
           packages = devPackages;
 
