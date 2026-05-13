@@ -4,6 +4,7 @@ pub trait Provider: Send {
     fn id(&self) -> &'static str;
     fn search(&self, query: &str) -> Vec<SearchResult>;
     fn activate(&self, id: &str, action: &str) -> anyhow::Result<()>;
+    fn refresh(&mut self) -> anyhow::Result<()>;
 }
 
 #[derive(Serialize)]

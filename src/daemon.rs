@@ -111,6 +111,7 @@ impl DaemonState {
                 id,
                 action,
             } => self.handle_activate(provider, id, action),
+            ClientRequest::Refresh { request_id } => self.handle_refresh(request_id),
         }
     }
 
@@ -144,6 +145,18 @@ impl DaemonState {
                 message: err.to_string(),
             },
         }
+    }
+
+    fn handle_refresh(&mut self, request_id: u64) -> ServerResponse {
+        for provider in &mut self.providers {
+            if let Err(err) = provider.refresh() {
+                return ServerResponse::Error {
+                    message: format!("provider '{}' failed to refresh: {err}", provider.id()),
+                };
+            }
+        }
+
+        ServerResponse::Refreshed { request_id }
     }
 }
 

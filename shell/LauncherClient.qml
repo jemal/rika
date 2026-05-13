@@ -11,6 +11,7 @@ Item {
 
   signal resultsReceived(int requestId, var items)
   signal activated(string provider, string id, string action)
+  signal refreshed(int requestId)
   signal errorReceived(string message)
 
   function sendQuery(requestId, query) {
@@ -27,6 +28,13 @@ Item {
       "provider": provider,
       "id": id,
       "action": action
+    });
+  }
+
+  function sendRefresh(requestId) {
+    send({
+      "type": "refresh",
+      "request_id": requestId
     });
   }
 
@@ -65,6 +73,8 @@ Item {
       resultsReceived(response.request_id, response.items);
     } else if (response.type === "activated") {
       activated(response.provider, response.id, response.action);
+    } else if (response.type === "refreshed") {
+      refreshed(response.request_id);
     } else if (response.type === "error") {
       errorReceived(response.message);
     }

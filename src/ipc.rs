@@ -17,6 +17,9 @@ pub enum ClientRequest {
         id: String,
         action: String,
     },
+
+    #[serde(rename = "refresh")]
+    Refresh { request_id: u64 },
 }
 
 #[derive(Serialize)]
@@ -35,8 +38,9 @@ pub enum ServerResponse {
         action: String,
     },
 
+    #[serde(rename = "refreshed")]
+    Refreshed { request_id: u64 },
+
     #[serde(rename = "error")]
-    Error {
-        message: String,
-    },
+    Error { message: String },
 }

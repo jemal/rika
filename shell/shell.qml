@@ -14,6 +14,7 @@ PanelWindow {
   property var results: []
   property int requestId: 0
   property string ipcError: ""
+  property string footerStatus: ""
   readonly property int maxVisibleResults: 7
   readonly property int visibleResultCount: Math.min(filteredResults().length, maxVisibleResults)
   readonly property int resultAreaHeight: filteredResults().length === 0 ? 88 : visibleResultCount * 34
@@ -34,6 +35,13 @@ PanelWindow {
     requestId += 1;
     ipcError = "";
     ipc.sendQuery(requestId, text);
+  }
+
+  function refreshProviders() {
+    requestId += 1;
+    ipcError = "";
+    footerStatus = "Refreshing...";
+    ipc.sendRefresh(requestId);
   }
 
   function openLauncher() {
@@ -133,8 +141,27 @@ PanelWindow {
     onErrorReceived: message => {
       launcher.results = [];
       launcher.ipcError = message;
+      launcher.footerStatus = "";
       launcher.openLauncher();
     }
+
+    onRefreshed: responseRequestId => {
+      if (responseRequestId !== launcher.requestId) {
+        return;
+      }
+
+      launcher.footerStatus = "Refreshed";
+      footerStatusTimer.restart();
+      launcher.sendQuery(launcher.query);
+    }
+  }
+
+  Timer {
+    id: footerStatusTimer
+
+    interval: 1000
+    repeat: false
+    onTriggered: launcher.footerStatus = ""
   }
 
   Rectangle {

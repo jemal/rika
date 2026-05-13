@@ -61,6 +61,9 @@ Rectangle {
           if (event.key === Qt.Key_Escape) {
             root.launcher.closeLauncher();
             event.accepted = true;
+          } else if (event.key === Qt.Key_R && event.modifiers & Qt.ControlModifier) {
+            root.launcher.refreshProviders();
+            event.accepted = true;
           } else if (event.key === Qt.Key_Down && count > 0) {
             root.launcher.selectedIndex = Math.min(root.launcher.selectedIndex + 1, count - 1);
             root.positionSelectedResult();
@@ -118,8 +121,8 @@ Rectangle {
 
       Text {
         Layout.fillWidth: true
-        text: "↑↓"
-        color: root.launcher.mutedTextColor
+        text: root.launcher.footerStatus.length > 0 ? root.launcher.footerStatus : "↑↓"
+        color: root.launcher.footerStatus.length > 0 ? root.launcher.accentColor : root.launcher.mutedTextColor
         font.pixelSize: 11
       }
 

@@ -29,9 +29,15 @@ pub struct DesktopProvider {
 
 impl DesktopProvider {
     pub fn new() -> Self {
+        let apps = Self::build_desktop_apps();
+
+        Self { apps }
+    }
+
+    fn build_desktop_apps() -> Vec<DesktopApp> {
         let locales = get_languages_from_env();
         let mut seen = HashSet::new();
-        let mut apps = Vec::new();
+        let mut apps = vec![];
 
         for entry in Iter::new(default_paths()).entries(Some(&locales)) {
             if entry.hidden() || entry.no_display() {
@@ -57,7 +63,7 @@ impl DesktopProvider {
             });
         }
 
-        Self { apps }
+        apps
     }
 }
 
@@ -132,5 +138,10 @@ impl Provider for DesktopProvider {
             }
             _ => bail!("unsupported desktop action: {action}"),
         }
+    }
+
+    fn refresh(&mut self) -> anyhow::Result<()> {
+        self.apps = Self::build_desktop_apps();
+        Ok(())
     }
 }
