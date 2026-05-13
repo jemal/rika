@@ -2,12 +2,13 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 
 PanelWindow {
   id: launcher
 
-  property bool open: true
+  property bool open: false
   property int selectedIndex: 0
   property string query: ""
   property var results: []
@@ -29,6 +30,18 @@ PanelWindow {
     ipc.sendQuery(requestId, text);
   }
 
+  function openLauncher() {
+    open = true;
+  }
+
+  function closeLauncher() {
+    open = false;
+  }
+
+  function toggleLauncher() {
+    open = !open;
+  }
+
   function filteredResults() {
     return results;
   }
@@ -48,7 +61,7 @@ PanelWindow {
     const result = results[selectedIndex];
     const action = result.actions.length > 0 ? result.actions[0] : "open";
     ipc.activate(result.provider, result.id, action);
-    open = false;
+    closeLauncher();
   }
 
   visible: open
@@ -67,14 +80,32 @@ PanelWindow {
   WlrLayershell.exclusionMode: ExclusionMode.Ignore
 
   Component.onCompleted: {
-    panel.focusSearchInput();
-    sendQuery(query);
+    if (open) {
+      panel.focusSearchInput();
+      sendQuery(query);
+    }
   }
 
   onOpenChanged: {
     if (open) {
-      panel.focusSearchInput();
+      Qt.callLater(panel.focusSearchInput);
       sendQuery(query);
+    }
+  }
+
+  IpcHandler {
+    target: "launcher"
+
+    function open() {
+      launcher.openLauncher();
+    }
+
+    function close() {
+      launcher.closeLauncher();
+    }
+
+    function toggle() {
+      launcher.toggleLauncher();
     }
   }
 
@@ -105,7 +136,7 @@ PanelWindow {
 
     MouseArea {
       anchors.fill: parent
-      onClicked: launcher.open = false
+      onClicked: launcher.closeLauncher()
     }
   }
 

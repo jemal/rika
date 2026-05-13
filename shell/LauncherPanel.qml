@@ -58,7 +58,7 @@ Rectangle {
           const count = root.launcher.filteredResults().length;
 
           if (event.key === Qt.Key_Escape) {
-            root.launcher.open = false;
+            root.launcher.closeLauncher();
             event.accepted = true;
           } else if (event.key === Qt.Key_Down && count > 0) {
             root.launcher.selectedIndex = Math.min(root.launcher.selectedIndex + 1, count - 1);
