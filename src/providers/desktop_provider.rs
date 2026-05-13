@@ -67,20 +67,38 @@ impl Provider for DesktopProvider {
         let query = query.to_lowercase();
 
         for app in &self.apps {
+            let name = app.name.to_lowercase();
             let id = app.entry.id().to_lowercase();
 
-            if id.contains(&query) {
+            let score = {
+                if name.contains(&query) {
+                    1.0
+                } else if id.contains(&query) {
+                    0.5
+                } else {
+                    -1.0
+                }
+            };
+
+            if score > 0.0 {
                 results.push(SearchResult {
                     id: app.file_name.clone(),
                     provider: self.id(),
                     title: app.name.to_string(),
-                    subtitle: format!(""),
-                    icon: format!("{}", app.entry.icon().unwrap_or("application-x-executable")),
-                    score: 1.0,
+                    subtitle: String::new(),
+                    icon: app
+                        .entry
+                        .icon()
+                        .unwrap_or("application-x-executable")
+                        .to_string(),
+                    score,
                     actions: vec!["open".to_string()],
                 });
             }
         }
+
+        // highest score first
+        results.sort_by(|a, b| b.score.total_cmp(&a.score));
 
         results
     }
