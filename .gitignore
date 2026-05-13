@@ -3,6 +3,7 @@
 !.qmllint.ini
 
 !.rustfmt.toml
+!AGENTS.md
 
 !flake.nix
 !flake.lock
