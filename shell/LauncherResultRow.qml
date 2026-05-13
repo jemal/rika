@@ -97,20 +97,6 @@ Rectangle {
         visible: root.showSubtitle
       }
     }
-
-    RowLayout {
-      Layout.preferredWidth: 54
-      Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-
-      Text {
-        Layout.fillWidth: true
-        horizontalAlignment: Text.AlignRight
-        text: root.result.provider
-        color: root.launcher.mutedTextColor
-        font.pixelSize: 10
-        elide: Text.ElideRight
-      }
-    }
   }
 
   MouseArea {
