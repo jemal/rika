@@ -55,6 +55,11 @@
             pname = cargoToml.package.name;
             version = cargoToml.package.version;
             inherit cargoArtifacts src;
+
+            meta = {
+              description = "Launcher daemon for rika";
+              mainProgram = "rika";
+            };
           };
 
           rikaShell = pkgs.stdenvNoCC.mkDerivation {
@@ -86,6 +91,28 @@
             };
           };
 
+          rikaPackage = pkgs.stdenvNoCC.mkDerivation {
+            pname = "rika";
+            version = cargoToml.package.version;
+
+            dontUnpack = true;
+
+            installPhase = ''
+              runHook preInstall
+
+              mkdir -p $out/bin
+              ln -s ${lib.getExe' rika "rika"} $out/bin/rika
+              ln -s ${lib.getExe' rikaShell "rika-shell"} $out/bin/rika-shell
+
+              runHook postInstall
+            '';
+
+            meta = {
+              description = "Launcher daemon and Quickshell frontend for rika";
+              mainProgram = "rika-shell";
+            };
+          };
+
           devPackages = [
             rustToolchain
 
@@ -112,12 +139,13 @@
           packages = {
             inherit rika;
             rika-shell = rikaShell;
-            default = rikaShell;
+            default = rikaPackage;
           };
 
           checks = {
             inherit rika;
             rika-shell = rikaShell;
+            default = rikaPackage;
           };
 
           devShells.default = pkgs.mkShell {
