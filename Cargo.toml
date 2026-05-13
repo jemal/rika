@@ -1,0 +1,4 @@
+[package]
+name = "rika"
+edition = "2024"
+version = "0.0.1"

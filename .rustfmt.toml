@@ -1,0 +1,5 @@
+edition = "2024"                   # Keep in sync with Cargo.toml.
+group_imports = "StdExternalCrate"
+imports_granularity = "Crate"
+imports_layout = "Vertical"
+use_try_shorthand = true
