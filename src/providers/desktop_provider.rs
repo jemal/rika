@@ -1,4 +1,8 @@
-use std::collections::HashSet;
+use std::{
+    collections::HashSet,
+    process::Command,
+    thread,
+};
 
 use anyhow::{
     Context,
@@ -129,10 +133,16 @@ impl Provider for DesktopProvider {
                     bail!("desktop entry exec is empty: {id}");
                 };
 
-                std::process::Command::new(program)
+                let mut child = Command::new(program)
                     .args(args)
                     .spawn()
                     .context("while attempting to spawn desktop app")?;
+
+                thread::spawn(move || {
+                    if let Err(err) = child.wait() {
+                        eprintln!("failed to reap desktop app: {err}");
+                    }
+                });
 
                 Ok(())
             }
