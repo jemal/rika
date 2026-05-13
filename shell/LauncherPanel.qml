@@ -17,6 +17,28 @@ Rectangle {
     results.positionViewAtIndex(launcher.selectedIndex, ListView.Contain);
   }
 
+  function selectNextResult() {
+    const count = launcher.filteredResults().length;
+
+    if (count === 0) {
+      return;
+    }
+
+    launcher.selectedIndex = (launcher.selectedIndex + 1) % count;
+    positionSelectedResult();
+  }
+
+  function selectPreviousResult() {
+    const count = launcher.filteredResults().length;
+
+    if (count === 0) {
+      return;
+    }
+
+    launcher.selectedIndex = (launcher.selectedIndex - 1 + count) % count;
+    positionSelectedResult();
+  }
+
   radius: 8
   color: launcher.surfaceColor
   border.color: launcher.outlineColor
@@ -65,12 +87,20 @@ Rectangle {
             root.launcher.refreshProviders();
             event.accepted = true;
           } else if (event.key === Qt.Key_Down && count > 0) {
-            root.launcher.selectedIndex = Math.min(root.launcher.selectedIndex + 1, count - 1);
-            root.positionSelectedResult();
+            root.selectNextResult();
             event.accepted = true;
           } else if (event.key === Qt.Key_Up && count > 0) {
-            root.launcher.selectedIndex = Math.max(root.launcher.selectedIndex - 1, 0);
-            root.positionSelectedResult();
+            root.selectPreviousResult();
+            event.accepted = true;
+          } else if (event.key === Qt.Key_Backtab && count > 0) {
+            root.selectPreviousResult();
+            event.accepted = true;
+          } else if (event.key === Qt.Key_Tab && count > 0) {
+            if (event.modifiers & Qt.ShiftModifier) {
+              root.selectPreviousResult();
+            } else {
+              root.selectNextResult();
+            }
             event.accepted = true;
           } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
             root.launcher.activateSelection();
@@ -121,7 +151,14 @@ Rectangle {
 
       Text {
         Layout.fillWidth: true
-        text: root.launcher.footerStatus.length > 0 ? root.launcher.footerStatus : "↑↓"
+        text: {
+          if (root.launcher.footerStatus.length > 0) {
+            return root.launcher.footerStatus;
+          }
+
+          const count = root.launcher.filteredResults().length;
+          return count > 0 ? `${root.launcher.selectedIndex + 1}/${count}` : "0/0";
+        }
         color: root.launcher.footerStatus.length > 0 ? root.launcher.accentColor : root.launcher.mutedTextColor
         font.pixelSize: 11
       }
