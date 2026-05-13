@@ -13,7 +13,7 @@ Rectangle {
     input.forceActiveFocus();
   }
 
-  radius: 16
+  radius: 8
   color: launcher.surfaceColor
   border.color: launcher.outlineColor
   border.width: 1
@@ -21,31 +21,28 @@ Rectangle {
 
   ColumnLayout {
     anchors.fill: parent
-    anchors.margins: 14
-    spacing: 10
+    anchors.margins: 8
+    spacing: 2
 
     Rectangle {
       Layout.fillWidth: true
-      Layout.preferredHeight: 54
-      radius: 12
-      color: root.launcher.surfaceVariantColor
-      border.color: input.activeFocus ? root.launcher.primaryColor : root.launcher.outlineColor
-      border.width: 1
+      Layout.preferredHeight: 34
+      color: root.launcher.surfaceColor
 
       TextField {
         id: input
 
         anchors.fill: parent
-        anchors.leftMargin: 14
-        anchors.rightMargin: 14
+        anchors.leftMargin: 4
+        anchors.rightMargin: 4
         focus: true
         color: root.launcher.textColor
-        selectedTextColor: "#ffffff"
-        selectionColor: "#355c9d"
-        placeholderText: "Search apps, projects, commands, and web bangs"
+        selectedTextColor: root.launcher.surfaceColor
+        selectionColor: root.launcher.primaryColor
+        placeholderText: "Search"
         placeholderTextColor: root.launcher.mutedTextColor
         verticalAlignment: TextInput.AlignVCenter
-        font.pixelSize: 21
+        font.pixelSize: 15
         background: null
 
         onTextChanged: {
@@ -80,7 +77,7 @@ Rectangle {
       Layout.fillWidth: true
       Layout.fillHeight: true
       clip: true
-      spacing: 6
+      spacing: 0
       boundsBehavior: Flickable.StopAtBounds
       model: root.launcher.filteredResults()
 
@@ -101,8 +98,8 @@ Rectangle {
         width: parent.width - 32
         horizontalAlignment: Text.AlignHCenter
         text: root.launcher.ipcError.length > 0 ? root.launcher.ipcError : "No results"
-        color: root.launcher.ipcError.length > 0 ? "#ffb4ab" : root.launcher.mutedTextColor
-        font.pixelSize: 15
+        color: root.launcher.ipcError.length > 0 ? root.launcher.errorColor : root.launcher.mutedTextColor
+        font.pixelSize: 13
         wrapMode: Text.Wrap
         visible: results.count === 0
       }

@@ -14,15 +14,19 @@ PanelWindow {
   property var results: []
   property int requestId: 0
   property string ipcError: ""
+  readonly property int visibleResultCount: Math.min(filteredResults().length, 7)
 
-  readonly property color dimColor: Qt.alpha("#0c0f14", 0.46)
-  readonly property color surfaceColor: "#111318"
-  readonly property color surfaceVariantColor: "#191d24"
-  readonly property color hoverColor: "#273247"
-  readonly property color outlineColor: "#343a46"
-  readonly property color primaryColor: "#7aa7ff"
-  readonly property color textColor: "#f4f7fb"
-  readonly property color mutedTextColor: "#9aa3b2"
+  readonly property color dimColor: Qt.alpha("#0d0c0c", 0.22)
+  readonly property color surfaceColor: "#181820"
+  readonly property color surfaceVariantColor: "#181820"
+  readonly property color hoverColor: "#2d2b3a"
+  readonly property color outlineColor: Qt.alpha("#54546d", 0.46)
+  readonly property color primaryColor: "#7e9cd8"
+  readonly property color accentColor: "#98bb6c"
+  readonly property color warningColor: "#e6c384"
+  readonly property color errorColor: "#e46876"
+  readonly property color textColor: "#dcd7ba"
+  readonly property color mutedTextColor: "#727169"
 
   function sendQuery(text) {
     requestId += 1;
@@ -144,10 +148,10 @@ PanelWindow {
     id: panel
 
     launcher: launcher
-    width: Math.min(parent.width - 48, 760)
-    height: Math.min(parent.height - 96, 468)
+    width: Math.min(parent.width - 48, 580)
+    height: Math.min(parent.height - 96, 54 + Math.max(88, launcher.visibleResultCount * 34))
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.top: parent.top
-    anchors.topMargin: Math.max(56, Math.round(parent.height * 0.16))
+    anchors.topMargin: Math.max(48, Math.round(parent.height * 0.32))
   }
 }

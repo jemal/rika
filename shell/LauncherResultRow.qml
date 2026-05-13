@@ -9,13 +9,12 @@ Rectangle {
   required property int rowIndex
   required property var result
   required property var launcher
+  readonly property bool showSubtitle: result.subtitle.length > 0 && result.subtitle !== result.title
 
   width: ListView.view.width
-  height: 68
-  radius: 10
-  color: rowIndex === launcher.selectedIndex ? launcher.hoverColor : launcher.surfaceVariantColor
-  border.color: rowIndex === launcher.selectedIndex ? launcher.primaryColor : "transparent"
-  border.width: 1
+  height: 34
+  radius: 5
+  color: rowIndex === launcher.selectedIndex ? launcher.hoverColor : "transparent"
   clip: true
 
   Behavior on color {
@@ -27,37 +26,33 @@ Rectangle {
 
   RowLayout {
     anchors.fill: parent
-    anchors.leftMargin: 12
-    anchors.rightMargin: 12
-    spacing: 12
+    anchors.leftMargin: 8
+    anchors.rightMargin: 8
+    spacing: 8
 
-    Rectangle {
-      Layout.preferredWidth: 42
-      Layout.preferredHeight: 42
+    Text {
+      Layout.preferredWidth: 18
+      Layout.preferredHeight: 16
       Layout.alignment: Qt.AlignVCenter
-      radius: 10
-      color: root.rowIndex === root.launcher.selectedIndex ? "#365074" : root.launcher.surfaceColor
-
-      Text {
-        anchors.centerIn: parent
-        text: root.result.icon
-        color: "#dce7f8"
-        font.pixelSize: 16
-        font.bold: true
-      }
+      horizontalAlignment: Text.AlignHCenter
+      verticalAlignment: Text.AlignVCenter
+      text: root.result.icon
+      color: root.rowIndex === root.launcher.selectedIndex ? root.launcher.primaryColor : root.launcher.mutedTextColor
+      font.pixelSize: 12
+      font.bold: true
     }
 
-    ColumnLayout {
+    RowLayout {
       Layout.fillWidth: true
       Layout.alignment: Qt.AlignVCenter
-      spacing: 2
+      spacing: 8
 
       Text {
-        Layout.fillWidth: true
+        Layout.preferredWidth: Math.min(260, implicitWidth)
         text: root.result.title
         color: root.launcher.textColor
-        font.pixelSize: 17
-        font.bold: true
+        font.pixelSize: 14
+        font.weight: Font.Medium
         elide: Text.ElideRight
         maximumLineCount: 1
       }
@@ -66,33 +61,35 @@ Rectangle {
         Layout.fillWidth: true
         text: root.result.subtitle
         color: root.launcher.mutedTextColor
-        font.pixelSize: 13
+        font.pixelSize: 11
         elide: Text.ElideRight
         maximumLineCount: 1
+        visible: root.showSubtitle
       }
     }
 
-    ColumnLayout {
-      Layout.preferredWidth: 112
+    RowLayout {
+      Layout.preferredWidth: 88
       Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-      spacing: 2
+      spacing: 8
 
       Text {
-        Layout.fillWidth: true
+        Layout.preferredWidth: 42
         horizontalAlignment: Text.AlignRight
         text: root.result.provider
-        color: "#a9bddc"
-        font.pixelSize: 12
+        color: root.launcher.mutedTextColor
+        font.pixelSize: 10
         elide: Text.ElideRight
       }
 
       Text {
-        Layout.fillWidth: true
+        Layout.preferredWidth: 38
         horizontalAlignment: Text.AlignRight
         text: root.result.actions.length > 0 ? root.result.actions[0] : ""
-        color: root.launcher.mutedTextColor
-        font.pixelSize: 11
+        color: root.rowIndex === root.launcher.selectedIndex ? root.launcher.accentColor : root.launcher.mutedTextColor
+        font.pixelSize: 10
         elide: Text.ElideRight
+        visible: root.rowIndex === root.launcher.selectedIndex
       }
     }
   }
