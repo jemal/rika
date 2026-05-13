@@ -25,6 +25,8 @@
             inherit system;
           };
 
+          lib = pkgs.lib;
+
           rustToolchain =
             let
               fenix = inputs.fenix.packages.${system};
@@ -55,6 +57,35 @@
             inherit cargoArtifacts src;
           };
 
+          rikaShell = pkgs.stdenvNoCC.mkDerivation {
+            pname = "rika-shell";
+            version = cargoToml.package.version;
+
+            dontUnpack = true;
+
+            nativeBuildInputs = [
+              pkgs.makeWrapper
+            ];
+
+            installPhase = ''
+              runHook preInstall
+
+              mkdir -p $out/bin $out/share/rika
+              cp -r ${./shell} $out/share/rika/shell
+
+              makeWrapper ${lib.getExe pkgs.quickshell} $out/bin/rika-shell \
+                --set-default QS_CONFIG_PATH "$out/share/rika/shell" \
+                --prefix PATH : ${lib.makeBinPath [ rika ]}
+
+              runHook postInstall
+            '';
+
+            meta = {
+              description = "Quickshell frontend for rika";
+              mainProgram = "rika-shell";
+            };
+          };
+
           devPackages = [
             rustToolchain
 
@@ -80,11 +111,13 @@
         {
           packages = {
             inherit rika;
-            default = rika;
+            rika-shell = rikaShell;
+            default = rikaShell;
           };
 
           checks = {
             inherit rika;
+            rika-shell = rikaShell;
           };
 
           devShells.default = pkgs.mkShell {
