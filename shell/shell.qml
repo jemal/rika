@@ -50,6 +50,11 @@ PanelWindow {
 
   function closeLauncher() {
     open = false;
+    selectedIndex = 0;
+    query = "";
+    results = [];
+    ipcError = "";
+    footerStatus = "";
   }
 
   function toggleLauncher() {
