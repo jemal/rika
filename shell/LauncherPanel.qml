@@ -62,6 +62,7 @@ Rectangle {
         anchors.leftMargin: 4
         anchors.rightMargin: 4
         focus: true
+        text: root.launcher.query
         color: root.launcher.textColor
         selectedTextColor: root.launcher.surfaceColor
         selectionColor: root.launcher.primaryColor
@@ -72,6 +73,10 @@ Rectangle {
         background: null
 
         onTextChanged: {
+          if (root.launcher.query === text) {
+            return;
+          }
+
           root.launcher.query = text;
           root.launcher.selectedIndex = 0;
           root.launcher.sendQuery(text);
