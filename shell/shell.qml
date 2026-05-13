@@ -14,7 +14,9 @@ PanelWindow {
   property var results: []
   property int requestId: 0
   property string ipcError: ""
-  readonly property int visibleResultCount: Math.min(filteredResults().length, 7)
+  readonly property int maxVisibleResults: 7
+  readonly property int visibleResultCount: Math.min(filteredResults().length, maxVisibleResults)
+  readonly property int resultAreaHeight: filteredResults().length === 0 ? 88 : visibleResultCount * 34
 
   readonly property color dimColor: Qt.alpha("#0d0c0c", 0.22)
   readonly property color surfaceColor: "#181820"
@@ -149,7 +151,7 @@ PanelWindow {
 
     launcher: launcher
     width: Math.min(parent.width - 48, 580)
-    height: Math.min(parent.height - 96, 54 + Math.max(88, launcher.visibleResultCount * 34))
+    height: Math.min(parent.height - 96, 78 + launcher.resultAreaHeight)
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.top: parent.top
     anchors.topMargin: Math.max(48, Math.round(parent.height * 0.32))

@@ -99,27 +99,16 @@ Rectangle {
     }
 
     RowLayout {
-      Layout.preferredWidth: 78
+      Layout.preferredWidth: 54
       Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-      spacing: 6
 
       Text {
-        Layout.preferredWidth: 44
+        Layout.fillWidth: true
         horizontalAlignment: Text.AlignRight
         text: root.result.provider
         color: root.launcher.mutedTextColor
         font.pixelSize: 10
         elide: Text.ElideRight
-      }
-
-      Text {
-        Layout.preferredWidth: 28
-        horizontalAlignment: Text.AlignRight
-        text: root.result.actions.length > 0 ? root.result.actions[0] : ""
-        color: root.rowIndex === root.launcher.selectedIndex ? root.launcher.accentColor : root.launcher.mutedTextColor
-        font.pixelSize: 10
-        elide: Text.ElideRight
-        visible: root.rowIndex === root.launcher.selectedIndex
       }
     }
   }

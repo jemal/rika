@@ -13,6 +13,10 @@ Rectangle {
     input.forceActiveFocus();
   }
 
+  function positionSelectedResult() {
+    results.positionViewAtIndex(launcher.selectedIndex, ListView.Contain);
+  }
+
   radius: 8
   color: launcher.surfaceColor
   border.color: launcher.outlineColor
@@ -59,9 +63,11 @@ Rectangle {
             event.accepted = true;
           } else if (event.key === Qt.Key_Down && count > 0) {
             root.launcher.selectedIndex = Math.min(root.launcher.selectedIndex + 1, count - 1);
+            root.positionSelectedResult();
             event.accepted = true;
           } else if (event.key === Qt.Key_Up && count > 0) {
             root.launcher.selectedIndex = Math.max(root.launcher.selectedIndex - 1, 0);
+            root.positionSelectedResult();
             event.accepted = true;
           } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
             root.launcher.activateSelection();
@@ -102,6 +108,55 @@ Rectangle {
         font.pixelSize: 13
         wrapMode: Text.Wrap
         visible: results.count === 0
+      }
+    }
+
+    RowLayout {
+      Layout.fillWidth: true
+      Layout.preferredHeight: 22
+      spacing: 14
+
+      Text {
+        Layout.fillWidth: true
+        text: "↑↓"
+        color: root.launcher.mutedTextColor
+        font.pixelSize: 11
+      }
+
+      Text {
+        text: "Open"
+        color: root.launcher.textColor
+        font.pixelSize: 11
+      }
+
+      Text {
+        text: "enter"
+        color: root.launcher.mutedTextColor
+        font.pixelSize: 11
+      }
+
+      Text {
+        text: "Refresh"
+        color: root.launcher.textColor
+        font.pixelSize: 11
+      }
+
+      Text {
+        text: "ctrl-r"
+        color: root.launcher.mutedTextColor
+        font.pixelSize: 11
+      }
+
+      Text {
+        text: "Close"
+        color: root.launcher.textColor
+        font.pixelSize: 11
+      }
+
+      Text {
+        text: "esc"
+        color: root.launcher.mutedTextColor
+        font.pixelSize: 11
       }
     }
   }
