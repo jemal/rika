@@ -65,6 +65,8 @@ Item {
       resultsReceived(response.request_id, response.items);
     } else if (response.type === "activated") {
       activated(response.provider, response.id, response.action);
+    } else if (response.type === "error") {
+      errorReceived(response.message);
     }
   }
 

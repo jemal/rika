@@ -128,14 +128,21 @@ impl DaemonState {
     }
 
     fn handle_activate(&mut self, provider: String, id: String, action: String) -> ServerResponse {
-        if let Some(provider) = self.providers.iter().find(|p| p.id() == provider) {
-            provider.activate(&id, &action);
-        }
+        let Some(provider_impl) = self.providers.iter().find(|p| p.id() == provider) else {
+            return ServerResponse::Error {
+                message: format!("provider not found: {provider}"),
+            };
+        };
 
-        ServerResponse::Activated {
-            provider,
-            id,
-            action,
+        match provider_impl.activate(&id, &action) {
+            Ok(()) => ServerResponse::Activated {
+                provider,
+                id,
+                action,
+            },
+            Err(err) => ServerResponse::Error {
+                message: err.to_string(),
+            },
         }
     }
 }

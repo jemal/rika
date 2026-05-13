@@ -3,7 +3,7 @@ use serde::Serialize;
 pub trait Provider: Send {
     fn id(&self) -> &'static str;
     fn search(&self, query: &str) -> Vec<SearchResult>;
-    fn activate(&self, id: &str, action: &str);
+    fn activate(&self, id: &str, action: &str) -> anyhow::Result<()>;
 }
 
 #[derive(Serialize)]

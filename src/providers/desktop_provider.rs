@@ -1,5 +1,9 @@
 use std::collections::HashSet;
 
+use anyhow::{
+    Context,
+    bail,
+};
 use freedesktop_desktop_entry::{
     DesktopEntry,
     Iter,
@@ -103,22 +107,30 @@ impl Provider for DesktopProvider {
         results
     }
 
-    fn activate(&self, id: &str, action: &str) {
+    fn activate(&self, id: &str, action: &str) -> anyhow::Result<()> {
         match action {
             "open" => {
                 let Some(app) = self.apps.iter().find(|app| app.file_name == id) else {
-                    return;
+                    bail!("desktop app not found: {id}");
                 };
 
-                let Ok(argv) = app.entry.parse_exec() else {
-                    return;
+                let argv = app
+                    .entry
+                    .parse_exec()
+                    .context("while attempting to parse desktop entry exec")?;
+
+                let Some((program, args)) = argv.split_first() else {
+                    bail!("desktop entry exec is empty: {id}");
                 };
 
-                if let Some((program, args)) = argv.split_first() {
-                    std::process::Command::new(program).args(args).spawn().ok();
-                }
+                std::process::Command::new(program)
+                    .args(args)
+                    .spawn()
+                    .context("while attempting to spawn desktop app")?;
+
+                Ok(())
             }
-            _ => todo!(),
+            _ => bail!("unsupported desktop action: {action}"),
         }
     }
 }

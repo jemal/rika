@@ -133,6 +133,7 @@ PanelWindow {
     onErrorReceived: message => {
       launcher.results = [];
       launcher.ipcError = message;
+      launcher.openLauncher();
     }
   }
 

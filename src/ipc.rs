@@ -34,4 +34,9 @@ pub enum ServerResponse {
         id: String,
         action: String,
     },
+
+    #[serde(rename = "error")]
+    Error {
+        message: String,
+    },
 }
