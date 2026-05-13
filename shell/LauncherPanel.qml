@@ -143,7 +143,7 @@ Rectangle {
         horizontalAlignment: Text.AlignHCenter
         text: root.launcher.ipcError.length > 0 ? root.launcher.ipcError : "No results"
         color: root.launcher.ipcError.length > 0 ? root.launcher.errorColor : root.launcher.mutedTextColor
-        font.pixelSize: 13
+        font.pixelSize: 14
         wrapMode: Text.Wrap
         visible: results.count === 0
       }
@@ -152,7 +152,7 @@ Rectangle {
     RowLayout {
       Layout.fillWidth: true
       Layout.preferredHeight: 22
-      spacing: 14
+      spacing: 8
 
       Text {
         Layout.fillWidth: true
@@ -165,43 +165,43 @@ Rectangle {
           return count > 0 ? `${root.launcher.selectedIndex + 1}/${count}` : "0/0";
         }
         color: root.launcher.footerStatus.length > 0 ? root.launcher.accentColor : root.launcher.mutedTextColor
-        font.pixelSize: 11
+        font.pixelSize: 13
       }
 
       Text {
         text: "Open"
         color: root.launcher.textColor
-        font.pixelSize: 11
+        font.pixelSize: 13
       }
 
       Text {
         text: "enter"
         color: root.launcher.mutedTextColor
-        font.pixelSize: 11
+        font.pixelSize: 13
       }
 
       Text {
         text: "Refresh"
         color: root.launcher.textColor
-        font.pixelSize: 11
+        font.pixelSize: 13
       }
 
       Text {
         text: "ctrl-r"
         color: root.launcher.mutedTextColor
-        font.pixelSize: 11
+        font.pixelSize: 13
       }
 
       Text {
         text: "Close"
         color: root.launcher.textColor
-        font.pixelSize: 11
+        font.pixelSize: 13
       }
 
       Text {
         text: "esc"
         color: root.launcher.mutedTextColor
-        font.pixelSize: 11
+        font.pixelSize: 13
       }
     }
   }
