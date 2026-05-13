@@ -2,6 +2,8 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
+import Quickshell.Widgets
 
 Rectangle {
   id: root
@@ -10,6 +12,20 @@ Rectangle {
   required property var result
   required property var launcher
   readonly property bool showSubtitle: result.subtitle.length > 0 && result.subtitle !== result.title
+  readonly property string iconSource: resolveIconSource(result.icon)
+
+  function resolveIconSource(icon) {
+    if (!icon || icon.length === 0) {
+      return "";
+    }
+
+    if (icon.startsWith("/")) {
+      return `file://${icon}`;
+    }
+
+    const path = Quickshell.iconPath(icon, "application-x-executable");
+    return path && path.length > 0 ? path : "";
+  }
 
   width: ListView.view.width
   height: 34
@@ -30,25 +46,39 @@ Rectangle {
     anchors.rightMargin: 8
     spacing: 8
 
-    Text {
-      Layout.preferredWidth: 18
-      Layout.preferredHeight: 16
+    Item {
+      Layout.preferredWidth: 24
+      Layout.preferredHeight: 24
       Layout.alignment: Qt.AlignVCenter
-      horizontalAlignment: Text.AlignHCenter
-      verticalAlignment: Text.AlignVCenter
-      text: root.result.icon
-      color: root.rowIndex === root.launcher.selectedIndex ? root.launcher.primaryColor : root.launcher.mutedTextColor
-      font.pixelSize: 12
-      font.bold: true
-    }
 
-    RowLayout {
-      Layout.fillWidth: true
-      Layout.alignment: Qt.AlignVCenter
-      spacing: 8
+      IconImage {
+        anchors.centerIn: parent
+        width: 18
+        height: 18
+        source: root.iconSource
+        asynchronous: true
+        visible: root.iconSource.length > 0
+      }
 
       Text {
-        Layout.preferredWidth: Math.min(260, implicitWidth)
+        anchors.centerIn: parent
+        horizontalAlignment: Text.AlignHCenter
+        verticalAlignment: Text.AlignVCenter
+        text: root.result.title.length > 0 ? root.result.title[0].toUpperCase() : "?"
+        color: root.rowIndex === root.launcher.selectedIndex ? root.launcher.primaryColor : root.launcher.mutedTextColor
+        font.pixelSize: 11
+        font.weight: Font.Medium
+        visible: root.iconSource.length === 0
+      }
+    }
+
+    ColumnLayout {
+      Layout.fillWidth: true
+      Layout.alignment: Qt.AlignVCenter
+      spacing: 0
+
+      Text {
+        Layout.fillWidth: true
         text: root.result.title
         color: root.launcher.textColor
         font.pixelSize: 14
@@ -61,7 +91,7 @@ Rectangle {
         Layout.fillWidth: true
         text: root.result.subtitle
         color: root.launcher.mutedTextColor
-        font.pixelSize: 11
+        font.pixelSize: 10
         elide: Text.ElideRight
         maximumLineCount: 1
         visible: root.showSubtitle
@@ -69,12 +99,12 @@ Rectangle {
     }
 
     RowLayout {
-      Layout.preferredWidth: 88
+      Layout.preferredWidth: 78
       Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-      spacing: 8
+      spacing: 6
 
       Text {
-        Layout.preferredWidth: 42
+        Layout.preferredWidth: 44
         horizontalAlignment: Text.AlignRight
         text: root.result.provider
         color: root.launcher.mutedTextColor
@@ -83,7 +113,7 @@ Rectangle {
       }
 
       Text {
-        Layout.preferredWidth: 38
+        Layout.preferredWidth: 28
         horizontalAlignment: Text.AlignRight
         text: root.result.actions.length > 0 ? root.result.actions[0] : ""
         color: root.rowIndex === root.launcher.selectedIndex ? root.launcher.accentColor : root.launcher.mutedTextColor
