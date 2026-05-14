@@ -15,6 +15,10 @@
 !docs/**/
 !docs/**/*.md
 
+!resources/
+!resources/**/
+!resources/**/*.toml
+
 !shell/
 !shell/**/
 !shell/**/*.qml

@@ -1,0 +1,15 @@
+[launcher]
+max_visible_results = 7
+font_family = ""
+font_size = 14
+small_font_size = 13
+tiny_font_size = 10
+
+[launcher.window]
+anchor = "top"
+width = 580
+height = 316
+margin = 320
+
+[providers.desktop]
+enabled = true
