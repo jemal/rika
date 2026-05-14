@@ -16,13 +16,13 @@ use std::{
     thread,
 };
 
-use anyhow::bail;
+use anyhow::{
+    Context,
+    bail,
+};
 
 use crate::{
-    config::{
-        Config,
-        Launcher,
-    },
+    config::Config,
     io::Write,
     ipc::{
         ClientRequest,
@@ -33,6 +33,7 @@ use crate::{
 };
 
 pub struct DaemonState {
+    config: Config,
     providers: Vec<Box<dyn Provider>>,
 }
 
@@ -59,8 +60,10 @@ impl Daemon {
             }
         };
 
+        let config = Config::load_config().context("while reading config file")?;
+
         let providers = providers::build();
-        let state = Arc::new(Mutex::new(DaemonState { providers }));
+        let state = Arc::new(Mutex::new(DaemonState { config, providers }));
 
         Ok(Self { listener, state })
     }
@@ -153,6 +156,15 @@ impl DaemonState {
     }
 
     fn handle_refresh(&mut self, request_id: u64) -> ServerResponse {
+        let config = match Config::load_config() {
+            Ok(config) => config,
+            Err(err) => {
+                return ServerResponse::Error {
+                    message: format!("failed to reload config: {err}"),
+                };
+            }
+        };
+
         for provider in &mut self.providers {
             if let Err(err) = provider.refresh() {
                 return ServerResponse::Error {
@@ -161,17 +173,18 @@ impl DaemonState {
             }
         }
 
-        ServerResponse::Refreshed { request_id }
+        self.config = config;
+
+        ServerResponse::Refreshed {
+            request_id,
+            config: self.config.clone(),
+        }
     }
 
     fn handle_config(&self) -> ServerResponse {
-        let config = Config {
-            launcher: Launcher {
-                max_visible_results: 3,
-            },
-        };
-
-        ServerResponse::Config { config }
+        ServerResponse::Config {
+            config: self.config.clone(),
+        }
     }
 }
 

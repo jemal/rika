@@ -45,7 +45,7 @@ pub enum ServerResponse {
     },
 
     #[serde(rename = "refreshed")]
-    Refreshed { request_id: u64 },
+    Refreshed { request_id: u64, config: Config },
 
     #[serde(rename = "config")]
     Config { config: Config },

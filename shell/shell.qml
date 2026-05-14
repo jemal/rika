@@ -187,10 +187,12 @@ PanelWindow {
       launcher.openLauncher();
     }
 
-    onRefreshed: responseRequestId => {
+    onRefreshed: (responseRequestId, config) => {
       if (responseRequestId !== launcher.requestId) {
         return;
       }
+
+      applyConfig(config);
 
       launcher.primingInitialResults = false;
       launcher.footerStatus = "Refreshed";
@@ -199,6 +201,10 @@ PanelWindow {
     }
 
     onConfigReceived: config => {
+      applyConfig(config);
+    }
+
+    function applyConfig(config) {
       const value = config?.launcher?.max_visible_results;
 
       if (typeof value === "number" && value > 0) {
