@@ -24,7 +24,8 @@ Rectangle {
       return;
     }
 
-    launcher.selectedIndex = (launcher.selectedIndex + 1) % count;
+    const currentIndex = Math.max(0, Math.min(launcher.selectedIndex, count - 1));
+    launcher.selectedIndex = (currentIndex + 1) % count;
     positionSelectedResult();
   }
 
@@ -35,7 +36,8 @@ Rectangle {
       return;
     }
 
-    launcher.selectedIndex = (launcher.selectedIndex - 1 + count) % count;
+    const currentIndex = Math.max(0, Math.min(launcher.selectedIndex, count - 1));
+    launcher.selectedIndex = currentIndex === 0 ? count - 1 : currentIndex - 1;
     positionSelectedResult();
   }
 
@@ -69,7 +71,8 @@ Rectangle {
         placeholderText: "Search"
         placeholderTextColor: root.launcher.mutedTextColor
         verticalAlignment: TextInput.AlignVCenter
-        font.pixelSize: 15
+        font.family: root.launcher.fontFamily
+        font.pixelSize: root.launcher.fontSize + 1
         background: null
 
         onTextChanged: {
@@ -167,7 +170,8 @@ Rectangle {
         horizontalAlignment: Text.AlignHCenter
         text: root.launcher.ipcError.length > 0 ? root.launcher.ipcError : "No results"
         color: root.launcher.ipcError.length > 0 ? root.launcher.errorColor : root.launcher.mutedTextColor
-        font.pixelSize: 14
+        font.family: root.launcher.fontFamily
+        font.pixelSize: root.launcher.fontSize
         wrapMode: Text.Wrap
         visible: results.count === 0
       }
@@ -189,43 +193,50 @@ Rectangle {
           return count > 0 ? `${root.launcher.selectedIndex + 1}/${count}` : "0/0";
         }
         color: root.launcher.footerStatus.length > 0 ? root.launcher.accentColor : root.launcher.mutedTextColor
-        font.pixelSize: 13
+        font.family: root.launcher.fontFamily
+        font.pixelSize: root.launcher.smallFontSize
       }
 
       Text {
         text: "Open"
         color: root.launcher.textColor
-        font.pixelSize: 13
+        font.family: root.launcher.fontFamily
+        font.pixelSize: root.launcher.smallFontSize
       }
 
       Text {
         text: "enter"
         color: root.launcher.mutedTextColor
-        font.pixelSize: 13
+        font.family: root.launcher.fontFamily
+        font.pixelSize: root.launcher.smallFontSize
       }
 
       Text {
         text: "Refresh"
         color: root.launcher.textColor
-        font.pixelSize: 13
+        font.family: root.launcher.fontFamily
+        font.pixelSize: root.launcher.smallFontSize
       }
 
       Text {
         text: "ctrl-r"
         color: root.launcher.mutedTextColor
-        font.pixelSize: 13
+        font.family: root.launcher.fontFamily
+        font.pixelSize: root.launcher.smallFontSize
       }
 
       Text {
         text: "Close"
         color: root.launcher.textColor
-        font.pixelSize: 13
+        font.family: root.launcher.fontFamily
+        font.pixelSize: root.launcher.smallFontSize
       }
 
       Text {
         text: "esc"
         color: root.launcher.mutedTextColor
-        font.pixelSize: 13
+        font.family: root.launcher.fontFamily
+        font.pixelSize: root.launcher.smallFontSize
       }
     }
   }

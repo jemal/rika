@@ -21,12 +21,20 @@ pub struct Config {
 #[serde(default)]
 pub struct Launcher {
     pub max_visible_results: u8,
+    pub font_family: String,
+    pub font_size: u8,
+    pub small_font_size: u8,
+    pub tiny_font_size: u8,
 }
 
 impl Default for Launcher {
     fn default() -> Self {
         Self {
             max_visible_results: 7,
+            font_family: String::new(),
+            font_size: 14,
+            small_font_size: 13,
+            tiny_font_size: 10,
         }
     }
 }

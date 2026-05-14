@@ -86,7 +86,8 @@ Rectangle {
         verticalAlignment: Text.AlignVCenter
         text: root.result.title.length > 0 ? root.result.title[0].toUpperCase() : "?"
         color: root.selected ? root.launcher.primaryColor : root.launcher.mutedTextColor
-        font.pixelSize: 11
+        font.family: root.launcher.fontFamily
+        font.pixelSize: root.launcher.smallFontSize
         font.weight: Font.Medium
         visible: root.iconSource.length === 0
       }
@@ -101,7 +102,8 @@ Rectangle {
         Layout.fillWidth: true
         text: root.result.title
         color: root.launcher.textColor
-        font.pixelSize: 14
+        font.family: root.launcher.fontFamily
+        font.pixelSize: root.launcher.fontSize
         font.weight: Font.Medium
         elide: Text.ElideRight
         maximumLineCount: 1
@@ -111,7 +113,8 @@ Rectangle {
         Layout.fillWidth: true
         text: root.result.subtitle
         color: root.launcher.mutedTextColor
-        font.pixelSize: 10
+        font.family: root.launcher.fontFamily
+        font.pixelSize: root.launcher.tinyFontSize
         elide: Text.ElideRight
         maximumLineCount: 1
         visible: root.showSubtitle

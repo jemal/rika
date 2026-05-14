@@ -20,6 +20,10 @@ PanelWindow {
   property string ipcError: ""
   property string footerStatus: ""
   property int maxVisibleResults: 7
+  property string fontFamily: ""
+  property int fontSize: 14
+  property int smallFontSize: 13
+  property int tinyFontSize: 10
   readonly property int visibleResultCount: Math.min(filteredResults().length, maxVisibleResults)
   readonly property int resultAreaHeight: filteredResults().length === 0 ? 88 : visibleResultCount * 34
 
@@ -94,7 +98,7 @@ PanelWindow {
 
   function clampSelection() {
     const count = filteredResults().length;
-    selectedIndex = count === 0 ? 0 : Math.min(selectedIndex, count - 1);
+    selectedIndex = count === 0 ? 0 : Math.max(0, Math.min(selectedIndex, count - 1));
   }
 
   function activateSelection() {
@@ -208,10 +212,31 @@ PanelWindow {
     }
 
     function applyConfig(config) {
-      const value = config?.launcher?.max_visible_results;
+      const launcherConfig = config?.launcher;
+      const maxVisibleResults = launcherConfig?.max_visible_results;
+      const fontFamily = launcherConfig?.font_family;
+      const fontSize = launcherConfig?.font_size;
+      const smallFontSize = launcherConfig?.small_font_size;
+      const tinyFontSize = launcherConfig?.tiny_font_size;
 
-      if (typeof value === "number" && value > 0) {
-        launcher.maxVisibleResults = value;
+      if (typeof maxVisibleResults === "number" && maxVisibleResults > 0) {
+        launcher.maxVisibleResults = maxVisibleResults;
+      }
+
+      if (typeof fontFamily === "string") {
+        launcher.fontFamily = fontFamily;
+      }
+
+      if (typeof fontSize === "number" && fontSize > 0) {
+        launcher.fontSize = fontSize;
+      }
+
+      if (typeof smallFontSize === "number" && smallFontSize > 0) {
+        launcher.smallFontSize = smallFontSize;
+      }
+
+      if (typeof tinyFontSize === "number" && tinyFontSize > 0) {
+        launcher.tinyFontSize = tinyFontSize;
       }
     }
   }
