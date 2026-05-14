@@ -187,7 +187,7 @@ PanelWindow {
       launcher.openLauncher();
     }
 
-    onRefreshed: (responseRequestId, config) => {
+    onRefreshed: (responseRequestId, config, errors) => {
       if (responseRequestId !== launcher.requestId) {
         return;
       }
@@ -195,7 +195,7 @@ PanelWindow {
       applyConfig(config);
 
       launcher.primingInitialResults = false;
-      launcher.footerStatus = "Refreshed";
+      launcher.footerStatus = errors.length > 0 ? errors.join("; ") : "Refreshed";
       footerStatusTimer.restart();
       launcher.sendQuery(launcher.query);
     }

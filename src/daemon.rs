@@ -175,15 +175,10 @@ impl DaemonState {
             }
         }
 
-        if !errors.is_empty() {
-            return ServerResponse::Error {
-                message: errors.join("; "),
-            };
-        }
-
         ServerResponse::Refreshed {
             request_id,
             config: self.config.clone(),
+            errors,
         }
     }
 

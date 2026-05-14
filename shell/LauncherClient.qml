@@ -11,7 +11,7 @@ Item {
 
   signal resultsReceived(int requestId, var items)
   signal activated(string provider, string id, string action)
-  signal refreshed(int requestId, var config)
+  signal refreshed(int requestId, var config, var errors)
   signal configReceived(var config)
   signal errorReceived(string message)
 
@@ -81,7 +81,7 @@ Item {
     } else if (response.type === "activated") {
       activated(response.provider, response.id, response.action);
     } else if (response.type === "refreshed") {
-      refreshed(response.request_id, response.config);
+      refreshed(response.request_id, response.config, response.errors || []);
     } else if (response.type === "config") {
       configReceived(response.config);
     } else if (response.type === "error") {
