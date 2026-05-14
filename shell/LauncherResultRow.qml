@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
-import Quickshell
 import Quickshell.Widgets
 
 Rectangle {
@@ -12,20 +11,7 @@ Rectangle {
   required property var result
   required property var launcher
   readonly property bool showSubtitle: result.subtitle.length > 0 && result.subtitle !== result.title
-  readonly property string iconSource: resolveIconSource(result.icon)
-
-  function resolveIconSource(icon) {
-    if (!icon || icon.length === 0) {
-      return "";
-    }
-
-    if (icon.startsWith("/")) {
-      return `file://${icon}`;
-    }
-
-    const path = Quickshell.iconPath(icon, "application-x-executable");
-    return path && path.length > 0 ? path : "";
-  }
+  readonly property string iconSource: launcher.resolveIconSource(result.icon)
 
   width: ListView.view.width
   height: 34

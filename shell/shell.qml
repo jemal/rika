@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Widgets
 import Quickshell.Wayland
 
 PanelWindow {
@@ -12,7 +13,9 @@ PanelWindow {
   property int selectedIndex: 0
   property string query: ""
   property var results: []
+  property var iconWarmResults: []
   property int requestId: 0
+  property bool primingInitialResults: false
   property string ipcError: ""
   property string footerStatus: ""
   readonly property int maxVisibleResults: 7
@@ -35,6 +38,24 @@ PanelWindow {
     requestId += 1;
     ipcError = "";
     ipc.sendQuery(requestId, text);
+  }
+
+  function primeInitialResults() {
+    primingInitialResults = true;
+    sendQuery(query);
+  }
+
+  function resolveIconSource(icon) {
+    if (!icon || icon.length === 0) {
+      return "";
+    }
+
+    if (icon.startsWith("/")) {
+      return `file://${icon}`;
+    }
+
+    const path = Quickshell.iconPath(icon, "application-x-executable");
+    return path && path.length > 0 ? path : "";
   }
 
   function refreshProviders() {
@@ -102,11 +123,14 @@ PanelWindow {
     if (open) {
       panel.focusSearchInput();
       sendQuery(query);
+    } else {
+      primeInitialResults();
     }
   }
 
   onOpenChanged: {
     if (open) {
+      primingInitialResults = false;
       Qt.callLater(panel.focusSearchInput);
       sendQuery(query);
     }
@@ -134,16 +158,24 @@ PanelWindow {
     socketPath: `${Quickshell.env("XDG_RUNTIME_DIR")}/rika-launcher.sock`
 
     onResultsReceived: (responseRequestId, items) => {
+      launcher.iconWarmResults = items;
+
       if (responseRequestId !== launcher.requestId) {
         return;
       }
 
       launcher.results = items;
       launcher.selectedIndex = 0;
+      launcher.primingInitialResults = false;
       launcher.ipcError = "";
     }
 
     onErrorReceived: message => {
+      if (launcher.primingInitialResults && !launcher.open) {
+        launcher.primingInitialResults = false;
+        return;
+      }
+
       launcher.results = [];
       launcher.ipcError = message;
       launcher.footerStatus = "";
@@ -155,6 +187,7 @@ PanelWindow {
         return;
       }
 
+      launcher.primingInitialResults = false;
       launcher.footerStatus = "Refreshed";
       footerStatusTimer.restart();
       launcher.sendQuery(launcher.query);
@@ -167,6 +200,28 @@ PanelWindow {
     interval: 1000
     repeat: false
     onTriggered: launcher.footerStatus = ""
+  }
+
+  Item {
+    x: -100
+    y: -100
+    width: 18
+    height: 18
+    opacity: 0
+
+    Repeater {
+      model: launcher.iconWarmResults.slice(0, launcher.maxVisibleResults)
+
+      delegate: IconImage {
+        required property var modelData
+
+        width: 18
+        height: 18
+        source: launcher.resolveIconSource(modelData.icon)
+        asynchronous: true
+        visible: source !== ""
+      }
+    }
   }
 
   Rectangle {
