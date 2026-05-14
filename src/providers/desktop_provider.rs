@@ -42,9 +42,7 @@ pub struct DesktopProviderConfig {
 
 impl Default for DesktopProviderConfig {
     fn default() -> Self {
-        Self {
-            enabled: true,
-        }
+        Self { enabled: true }
     }
 }
 
@@ -61,11 +59,11 @@ impl DesktopProvider {
         let mut apps = vec![];
 
         for entry in Iter::new(default_paths()).entries(Some(&locales)) {
-            if entry.hidden() || entry.no_display() {
+            if !seen.insert(entry.id().to_string()) {
                 continue;
             }
 
-            if !seen.insert(entry.id().to_string()) {
+            if entry.hidden() || entry.no_display() {
                 continue;
             }
 
