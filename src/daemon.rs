@@ -165,9 +165,9 @@ impl DaemonState {
             }
         };
 
-        let mut providers = providers::build(&config);
+        providers::update(&mut self.providers, &config);
 
-        for provider in &mut providers {
+        for provider in &mut self.providers {
             if let Err(err) = provider.refresh() {
                 return ServerResponse::Error {
                     message: format!("provider '{}' failed to refresh: {err}", provider.id()),
@@ -176,7 +176,6 @@ impl DaemonState {
         }
 
         self.config = config;
-        self.providers = providers;
 
         ServerResponse::Refreshed {
             request_id,
