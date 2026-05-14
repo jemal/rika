@@ -124,6 +124,30 @@ Rectangle {
       spacing: 0
       boundsBehavior: Flickable.StopAtBounds
       model: root.launcher.filteredResults()
+      add: Transition {
+        NumberAnimation {
+          properties: "opacity"
+          from: 0
+          to: 1
+          duration: 100
+          easing.type: Easing.OutCubic
+        }
+      }
+      displaced: Transition {
+        NumberAnimation {
+          properties: "x,y"
+          duration: 120
+          easing.type: Easing.OutCubic
+        }
+      }
+      remove: Transition {
+        NumberAnimation {
+          properties: "opacity"
+          to: 0
+          duration: 80
+          easing.type: Easing.OutCubic
+        }
+      }
 
       onCountChanged: root.launcher.clampSelection()
 

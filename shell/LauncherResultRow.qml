@@ -12,11 +12,12 @@ Rectangle {
   required property var launcher
   readonly property bool showSubtitle: result.subtitle.length > 0 && result.subtitle !== result.title
   readonly property string iconSource: launcher.resolveIconSource(result.icon)
+  readonly property bool selected: rowIndex === launcher.selectedIndex
 
   width: ListView.view.width
   height: 34
   radius: 5
-  color: rowIndex === launcher.selectedIndex ? launcher.hoverColor : "transparent"
+  color: selected ? launcher.hoverColor : "transparent"
   clip: true
 
   Behavior on color {
@@ -26,11 +27,44 @@ Rectangle {
     }
   }
 
+  Rectangle {
+    anchors.left: parent.left
+    anchors.leftMargin: 2
+    anchors.verticalCenter: parent.verticalCenter
+    width: 2
+    height: root.selected ? 18 : 0
+    radius: 1
+    color: root.launcher.primaryColor
+    opacity: root.selected ? 1 : 0
+
+    Behavior on height {
+      NumberAnimation {
+        duration: 120
+        easing.type: Easing.OutCubic
+      }
+    }
+
+    Behavior on opacity {
+      NumberAnimation {
+        duration: 120
+        easing.type: Easing.OutCubic
+      }
+    }
+  }
+
   RowLayout {
     anchors.fill: parent
-    anchors.leftMargin: 8
+    anchors.leftMargin: 10
     anchors.rightMargin: 8
     spacing: 8
+    opacity: root.selected ? 1 : 0.86
+
+    Behavior on opacity {
+      NumberAnimation {
+        duration: 120
+        easing.type: Easing.OutCubic
+      }
+    }
 
     Item {
       Layout.preferredWidth: 24
@@ -51,7 +85,7 @@ Rectangle {
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         text: root.result.title.length > 0 ? root.result.title[0].toUpperCase() : "?"
-        color: root.rowIndex === root.launcher.selectedIndex ? root.launcher.primaryColor : root.launcher.mutedTextColor
+        color: root.selected ? root.launcher.primaryColor : root.launcher.mutedTextColor
         font.pixelSize: 11
         font.weight: Font.Medium
         visible: root.iconSource.length === 0

@@ -10,6 +10,7 @@ PanelWindow {
   id: launcher
 
   property bool open: false
+  property bool shown: false
   property int selectedIndex: 0
   property string query: ""
   property var results: []
@@ -70,6 +71,7 @@ PanelWindow {
   }
 
   function openLauncher() {
+    shown = true;
     open = true;
   }
 
@@ -108,7 +110,7 @@ PanelWindow {
     closeLauncher();
   }
 
-  visible: open
+  visible: shown
   color: "transparent"
 
   anchors {
@@ -135,6 +137,7 @@ PanelWindow {
 
   onOpenChanged: {
     if (open) {
+      shown = true;
       primingInitialResults = false;
       Qt.callLater(panel.focusSearchInput);
       sendQuery(query);
@@ -244,8 +247,18 @@ PanelWindow {
   }
 
   Rectangle {
+    id: dimmer
+
     anchors.fill: parent
     color: launcher.dimColor
+    opacity: launcher.open ? 1 : 0
+
+    Behavior on opacity {
+      NumberAnimation {
+        duration: 110
+        easing.type: Easing.OutCubic
+      }
+    }
 
     MouseArea {
       anchors.fill: parent
@@ -259,8 +272,38 @@ PanelWindow {
     launcher: launcher
     width: Math.min(parent.width - 48, 580)
     height: Math.min(parent.height - 96, 78 + launcher.resultAreaHeight)
+    opacity: launcher.open ? 1 : 0
+    scale: launcher.open ? 1 : 0.985
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.top: parent.top
-    anchors.topMargin: Math.max(48, Math.round(parent.height * 0.32))
+    anchors.topMargin: Math.max(48, Math.round(parent.height * 0.32)) + (launcher.open ? 0 : -8)
+
+    Behavior on opacity {
+      NumberAnimation {
+        duration: 120
+        easing.type: Easing.OutCubic
+      }
+    }
+
+    Behavior on scale {
+      NumberAnimation {
+        duration: 120
+        easing.type: Easing.OutCubic
+      }
+    }
+
+    Behavior on anchors.topMargin {
+      NumberAnimation {
+        duration: 120
+        easing.type: Easing.OutCubic
+      }
+    }
+
+    Timer {
+      interval: 130
+      running: !launcher.open && launcher.shown
+      repeat: false
+      onTriggered: launcher.shown = false
+    }
   }
 }
