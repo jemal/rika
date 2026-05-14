@@ -6,10 +6,15 @@ use serde::{
     Serialize,
 };
 
+use crate::providers::desktop_provider::DesktopProviderConfig;
+
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct Config {
     #[serde(default)]
     pub launcher: Launcher,
+
+    #[serde(default)]
+    pub providers: Providers,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -24,6 +29,12 @@ impl Default for Launcher {
             max_visible_results: 7,
         }
     }
+}
+
+#[derive(Default, Clone, Serialize, Deserialize)]
+pub struct Providers {
+    #[serde(default)]
+    pub desktop: DesktopProviderConfig,
 }
 
 impl Config {

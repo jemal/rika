@@ -14,6 +14,10 @@ use freedesktop_desktop_entry::{
     default_paths,
     get_languages_from_env,
 };
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 use crate::provider::{
     Provider,
@@ -29,6 +33,19 @@ pub struct DesktopApp {
 
 pub struct DesktopProvider {
     apps: Vec<DesktopApp>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DesktopProviderConfig {
+    pub enabled: bool,
+}
+
+impl Default for DesktopProviderConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+        }
+    }
 }
 
 impl DesktopProvider {

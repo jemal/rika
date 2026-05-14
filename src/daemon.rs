@@ -61,8 +61,8 @@ impl Daemon {
         };
 
         let config = Config::load_config().context("while reading config file")?;
+        let providers = providers::build(&config);
 
-        let providers = providers::build();
         let state = Arc::new(Mutex::new(DaemonState { config, providers }));
 
         Ok(Self { listener, state })
@@ -165,7 +165,9 @@ impl DaemonState {
             }
         };
 
-        for provider in &mut self.providers {
+        let mut providers = providers::build(&config);
+
+        for provider in &mut providers {
             if let Err(err) = provider.refresh() {
                 return ServerResponse::Error {
                     message: format!("provider '{}' failed to refresh: {err}", provider.id()),
@@ -174,6 +176,7 @@ impl DaemonState {
         }
 
         self.config = config;
+        self.providers = providers;
 
         ServerResponse::Refreshed {
             request_id,
