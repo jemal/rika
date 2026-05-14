@@ -24,8 +24,22 @@ PanelWindow {
   property int fontSize: 14
   property int smallFontSize: 13
   property int tinyFontSize: 10
+  property string windowAnchor: "top"
+  property int windowWidth: 580
+  property int windowHeight: 316
+  property int windowMargin: 320
   readonly property int visibleResultCount: Math.min(filteredResults().length, maxVisibleResults)
   readonly property int resultAreaHeight: filteredResults().length === 0 ? 88 : visibleResultCount * 34
+  readonly property int panelWidth: Math.max(240, Math.min(width - 48, windowWidth))
+  readonly property int panelHeight: Math.max(140, Math.min(height - 96, windowHeight))
+  readonly property int panelX: Math.round((width - panelWidth) / 2)
+  readonly property int panelY: {
+    if (windowAnchor === "center") {
+      return Math.round((height - panelHeight) / 2);
+    }
+
+    return Math.max(24, Math.min(height - panelHeight - 24, windowMargin));
+  }
 
   readonly property color dimColor: Qt.alpha("#0d0c0c", 0.22)
   readonly property color surfaceColor: "#181820"
@@ -218,6 +232,11 @@ PanelWindow {
       const fontSize = launcherConfig?.font_size;
       const smallFontSize = launcherConfig?.small_font_size;
       const tinyFontSize = launcherConfig?.tiny_font_size;
+      const windowConfig = launcherConfig?.window;
+      const windowAnchor = windowConfig?.anchor;
+      const windowWidth = windowConfig?.width;
+      const windowHeight = windowConfig?.height;
+      const windowMargin = windowConfig?.margin;
 
       if (typeof maxVisibleResults === "number" && maxVisibleResults > 0) {
         launcher.maxVisibleResults = maxVisibleResults;
@@ -237,6 +256,22 @@ PanelWindow {
 
       if (typeof tinyFontSize === "number" && tinyFontSize > 0) {
         launcher.tinyFontSize = tinyFontSize;
+      }
+
+      if (windowAnchor === "top" || windowAnchor === "center") {
+        launcher.windowAnchor = windowAnchor;
+      }
+
+      if (typeof windowWidth === "number" && windowWidth > 0) {
+        launcher.windowWidth = windowWidth;
+      }
+
+      if (typeof windowHeight === "number" && windowHeight > 0) {
+        launcher.windowHeight = windowHeight;
+      }
+
+      if (typeof windowMargin === "number" && windowMargin >= 0) {
+        launcher.windowMargin = windowMargin;
       }
     }
   }
@@ -295,13 +330,12 @@ PanelWindow {
     id: panel
 
     launcher: launcher
-    width: Math.min(parent.width - 48, 580)
-    height: Math.min(parent.height - 96, 78 + launcher.resultAreaHeight)
+    x: launcher.panelX
+    y: launcher.panelY + (launcher.open ? 0 : -8)
+    width: launcher.panelWidth
+    height: launcher.panelHeight
     opacity: launcher.open ? 1 : 0
     scale: launcher.open ? 1 : 0.985
-    anchors.horizontalCenter: parent.horizontalCenter
-    anchors.top: parent.top
-    anchors.topMargin: Math.max(48, Math.round(parent.height * 0.32)) + (launcher.open ? 0 : -8)
 
     Behavior on opacity {
       NumberAnimation {
@@ -317,7 +351,7 @@ PanelWindow {
       }
     }
 
-    Behavior on anchors.topMargin {
+    Behavior on y {
       NumberAnimation {
         duration: 120
         easing.type: Easing.OutCubic

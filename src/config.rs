@@ -25,6 +25,7 @@ pub struct Launcher {
     pub font_size: u8,
     pub small_font_size: u8,
     pub tiny_font_size: u8,
+    pub window: LauncherWindow,
 }
 
 impl Default for Launcher {
@@ -35,8 +36,37 @@ impl Default for Launcher {
             font_size: 14,
             small_font_size: 13,
             tiny_font_size: 10,
+            window: LauncherWindow::default(),
         }
     }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct LauncherWindow {
+    pub anchor: LauncherWindowAnchor,
+    pub width: u16,
+    pub height: u16,
+    pub margin: u16,
+}
+
+impl Default for LauncherWindow {
+    fn default() -> Self {
+        Self {
+            anchor: LauncherWindowAnchor::Top,
+            width: 580,
+            height: 316,
+            margin: 320,
+        }
+    }
+}
+
+#[derive(Default, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LauncherWindowAnchor {
+    #[default]
+    Top,
+    Center,
 }
 
 #[derive(Default, Clone, Serialize, Deserialize)]

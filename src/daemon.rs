@@ -171,7 +171,10 @@ impl DaemonState {
         let mut errors = vec![];
         for provider in &mut self.providers {
             if let Err(err) = provider.refresh() {
-                errors.push(format!("provider '{}' failed to refresh: {err}", provider.id()));
+                errors.push(format!(
+                    "provider '{}' failed to refresh: {err}",
+                    provider.id()
+                ));
             }
         }
 
