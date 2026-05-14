@@ -166,16 +166,20 @@ impl DaemonState {
         };
 
         providers::update(&mut self.providers, &config);
+        self.config = config;
 
+        let mut errors = vec![];
         for provider in &mut self.providers {
             if let Err(err) = provider.refresh() {
-                return ServerResponse::Error {
-                    message: format!("provider '{}' failed to refresh: {err}", provider.id()),
-                };
+                errors.push(format!("provider '{}' failed to refresh: {err}", provider.id()));
             }
         }
 
-        self.config = config;
+        if !errors.is_empty() {
+            return ServerResponse::Error {
+                message: errors.join("; "),
+            };
+        }
 
         ServerResponse::Refreshed {
             request_id,
