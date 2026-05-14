@@ -12,6 +12,7 @@ Item {
   signal resultsReceived(int requestId, var items)
   signal activated(string provider, string id, string action)
   signal refreshed(int requestId)
+  signal configReceived(var config)
   signal errorReceived(string message)
 
   function sendQuery(requestId, query) {
@@ -19,6 +20,12 @@ Item {
       "type": "query",
       "request_id": requestId,
       "query": query
+    });
+  }
+
+  function getConfig() {
+    send({
+      "type": "config"
     });
   }
 
@@ -75,6 +82,8 @@ Item {
       activated(response.provider, response.id, response.action);
     } else if (response.type === "refreshed") {
       refreshed(response.request_id);
+    } else if (response.type === "config") {
+      configReceived(response.config);
     } else if (response.type === "error") {
       errorReceived(response.message);
     }

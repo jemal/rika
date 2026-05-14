@@ -18,7 +18,7 @@ PanelWindow {
   property bool primingInitialResults: false
   property string ipcError: ""
   property string footerStatus: ""
-  readonly property int maxVisibleResults: 7
+  property int maxVisibleResults: 7
   readonly property int visibleResultCount: Math.min(filteredResults().length, maxVisibleResults)
   readonly property int resultAreaHeight: filteredResults().length === 0 ? 88 : visibleResultCount * 34
 
@@ -43,6 +43,10 @@ PanelWindow {
   function primeInitialResults() {
     primingInitialResults = true;
     sendQuery(query);
+  }
+
+  function fetchInitialConfig() {
+    ipc.getConfig();
   }
 
   function resolveIconSource(icon) {
@@ -124,6 +128,7 @@ PanelWindow {
       panel.focusSearchInput();
       sendQuery(query);
     } else {
+      fetchInitialConfig();
       primeInitialResults();
     }
   }
@@ -191,6 +196,14 @@ PanelWindow {
       launcher.footerStatus = "Refreshed";
       footerStatusTimer.restart();
       launcher.sendQuery(launcher.query);
+    }
+
+    onConfigReceived: config => {
+      const value = config?.launcher?.max_visible_results;
+
+      if (typeof value === "number" && value > 0) {
+        launcher.maxVisibleResults = value;
+      }
     }
   }
 

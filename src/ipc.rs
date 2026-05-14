@@ -3,7 +3,10 @@ use serde::{
     Serialize,
 };
 
-use crate::provider::SearchResult;
+use crate::{
+    config::Config,
+    provider::SearchResult,
+};
 
 #[derive(Deserialize)]
 #[serde(tag = "type")]
@@ -20,6 +23,9 @@ pub enum ClientRequest {
 
     #[serde(rename = "refresh")]
     Refresh { request_id: u64 },
+
+    #[serde(rename = "config")]
+    Config,
 }
 
 #[derive(Serialize)]
@@ -40,6 +46,9 @@ pub enum ServerResponse {
 
     #[serde(rename = "refreshed")]
     Refreshed { request_id: u64 },
+
+    #[serde(rename = "config")]
+    Config { config: Config },
 
     #[serde(rename = "error")]
     Error { message: String },

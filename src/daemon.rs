@@ -19,6 +19,10 @@ use std::{
 use anyhow::bail;
 
 use crate::{
+    config::{
+        Config,
+        Launcher,
+    },
     io::Write,
     ipc::{
         ClientRequest,
@@ -112,6 +116,7 @@ impl DaemonState {
                 action,
             } => self.handle_activate(provider, id, action),
             ClientRequest::Refresh { request_id } => self.handle_refresh(request_id),
+            ClientRequest::Config => self.handle_config(),
         }
     }
 
@@ -157,6 +162,16 @@ impl DaemonState {
         }
 
         ServerResponse::Refreshed { request_id }
+    }
+
+    fn handle_config(&self) -> ServerResponse {
+        let config = Config {
+            launcher: Launcher {
+                max_visible_results: 3,
+            },
+        };
+
+        ServerResponse::Config { config }
     }
 }
 
