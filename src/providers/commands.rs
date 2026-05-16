@@ -17,15 +17,14 @@ use crate::provider::{
     SearchResult,
 };
 
-pub struct CommandProvider {
+pub struct CommandsProvider {
     commands: Vec<Command>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-pub struct CommandProviderConfig {
+pub struct CommandsProviderConfig {
     pub enabled: bool,
-
     pub cmds: Vec<Command>,
 }
 
@@ -36,7 +35,7 @@ pub struct Command {
     command: String,
 }
 
-impl Default for CommandProviderConfig {
+impl Default for CommandsProviderConfig {
     fn default() -> Self {
         Self {
             enabled: true,
@@ -45,15 +44,15 @@ impl Default for CommandProviderConfig {
     }
 }
 
-impl CommandProvider {
-    pub fn new(config: &CommandProviderConfig) -> Self {
+impl CommandsProvider {
+    pub fn new(config: &CommandsProviderConfig) -> Self {
         Self {
             commands: config.cmds.clone(),
         }
     }
 }
 
-impl Provider for CommandProvider {
+impl Provider for CommandsProvider {
     fn id(&self) -> &'static str {
         "commands"
     }

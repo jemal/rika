@@ -25,35 +25,35 @@ use crate::provider::{
 };
 
 #[derive(Debug)]
-pub struct DesktopApp {
+pub struct App {
     file_name: String,
     name: String,
     entry: DesktopEntry,
 }
 
-pub struct DesktopProvider {
-    apps: Vec<DesktopApp>,
+pub struct AppsProvider {
+    apps: Vec<App>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct DesktopProviderConfig {
+pub struct AppsProviderConfig {
     pub enabled: bool,
 }
 
-impl Default for DesktopProviderConfig {
+impl Default for AppsProviderConfig {
     fn default() -> Self {
         Self { enabled: true }
     }
 }
 
-impl DesktopProvider {
+impl AppsProvider {
     pub fn new() -> Self {
-        let apps = Self::build_desktop_apps();
+        let apps = Self::build_apps();
 
         Self { apps }
     }
 
-    fn build_desktop_apps() -> Vec<DesktopApp> {
+    fn build_apps() -> Vec<App> {
         let locales = get_languages_from_env();
         let mut seen = HashSet::new();
         let mut apps = vec![];
@@ -75,7 +75,7 @@ impl DesktopProvider {
                 continue;
             };
 
-            apps.push(DesktopApp {
+            apps.push(App {
                 file_name: file_name.to_string(),
                 name: name.to_string(),
                 entry,
@@ -86,9 +86,9 @@ impl DesktopProvider {
     }
 }
 
-impl Provider for DesktopProvider {
+impl Provider for AppsProvider {
     fn id(&self) -> &'static str {
-        "desktop"
+        "apps"
     }
 
     fn search(&self, query: &str) -> Vec<SearchResult> {
@@ -166,7 +166,7 @@ impl Provider for DesktopProvider {
     }
 
     fn refresh(&mut self) -> anyhow::Result<()> {
-        self.apps = Self::build_desktop_apps();
+        self.apps = Self::build_apps();
         Ok(())
     }
 }

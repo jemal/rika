@@ -2,13 +2,13 @@ use crate::{
     config::Config,
     provider::Provider,
     providers::{
-        command_provider::CommandProvider,
-        desktop_provider::DesktopProvider,
+        apps::AppsProvider,
+        commands::CommandsProvider,
     },
 };
 
-pub mod command_provider;
-pub mod desktop_provider;
+pub mod apps;
+pub mod commands;
 
 struct ProviderSpec {
     id: &'static str,
@@ -25,15 +25,15 @@ enum ReloadMode {
 
 const PROVIDERS: &[ProviderSpec] = &[
     ProviderSpec {
-        id: "desktop",
-        enabled: |config| config.providers.desktop.enabled,
-        build: |_| Box::new(DesktopProvider::new()),
+        id: "apps",
+        enabled: |config| config.providers.apps.enabled,
+        build: |_| Box::new(AppsProvider::new()),
         reload: ReloadMode::Preserve,
     },
     ProviderSpec {
         id: "commands",
         enabled: |config| config.providers.commands.enabled,
-        build: |config| Box::new(CommandProvider::new(&config.providers.commands)),
+        build: |config| Box::new(CommandsProvider::new(&config.providers.commands)),
         reload: ReloadMode::Rebuild,
     },
 ];
