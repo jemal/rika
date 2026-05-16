@@ -12,6 +12,7 @@ Rectangle {
   required property var launcher
   readonly property bool showSubtitle: result.subtitle.length > 0 && result.subtitle !== result.title
   readonly property string iconSource: launcher.resolveIconSource(result.icon)
+  readonly property bool tintedIcon: result.icon.startsWith("builtin:")
   readonly property bool selected: rowIndex === launcher.selectedIndex
 
   width: ListView.view.width
@@ -71,13 +72,35 @@ Rectangle {
       Layout.preferredHeight: 24
       Layout.alignment: Qt.AlignVCenter
 
-      IconImage {
+      Loader {
         anchors.centerIn: parent
         width: 18
         height: 18
-        source: root.iconSource
-        asynchronous: true
-        visible: root.iconSource.length > 0
+        active: root.iconSource.length > 0 && !root.tintedIcon
+
+        sourceComponent: IconImage {
+          source: root.iconSource
+          asynchronous: true
+        }
+      }
+
+      Loader {
+        id: tintedIconLoader
+
+        property string resolvedSource: root.iconSource
+        property color resolvedColor: root.selected ? root.launcher.primaryColor : root.launcher.textColor
+
+        anchors.centerIn: parent
+        width: 18
+        height: 18
+        active: root.iconSource.length > 0 && root.tintedIcon
+
+        sourceComponent: TintedIcon {
+          width: 18
+          height: 18
+          source: tintedIconLoader.resolvedSource
+          color: tintedIconLoader.resolvedColor
+        }
       }
 
       Text {

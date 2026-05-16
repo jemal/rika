@@ -73,6 +73,17 @@ PanelWindow {
       return "";
     }
 
+    if (icon.startsWith("builtin:")) {
+      const iconName = icon.slice("builtin:".length);
+      const dataDir = Quickshell.env("RIKA_DATA_DIR");
+
+      if (dataDir && dataDir.length > 0) {
+        return `file://${dataDir}/resources/icons/${iconName}.svg`;
+      }
+
+      return Qt.resolvedUrl(`../resources/icons/${iconName}.svg`);
+    }
+
     if (icon.startsWith("/")) {
       return `file://${icon}`;
     }
@@ -294,14 +305,19 @@ PanelWindow {
     Repeater {
       model: launcher.iconWarmResults.slice(0, launcher.maxVisibleResults)
 
-      delegate: IconImage {
+      delegate: Loader {
+        id: iconWarmLoader
+
         required property var modelData
 
         width: 18
         height: 18
-        source: launcher.resolveIconSource(modelData.icon)
-        asynchronous: true
-        visible: source !== ""
+        active: modelData.icon.length > 0 && !modelData.icon.startsWith("builtin:")
+
+        sourceComponent: IconImage {
+          source: launcher.resolveIconSource(iconWarmLoader.modelData.icon)
+          asynchronous: true
+        }
       }
     }
   }

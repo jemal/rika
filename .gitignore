@@ -17,6 +17,7 @@
 
 !resources/
 !resources/**/
+!resources/**/*.svg
 !resources/**/*.toml
 
 !shell/

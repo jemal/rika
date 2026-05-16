@@ -69,7 +69,7 @@ impl Provider for CommandsProvider {
                     provider: self.id(),
                     title: cmd.name.to_string(),
                     subtitle: String::new(),
-                    icon: "application-x-executable".to_string(),
+                    icon: "builtin:square-terminal".to_string(),
                     score: 1.0,
                     actions: vec!["run".to_string()],
                 });

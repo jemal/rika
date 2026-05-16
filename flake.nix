@@ -51,6 +51,8 @@
             inherit src;
           };
 
+          qmlImportPath = "${pkgs.qt6.qt5compat}/lib/qt-6/qml:${pkgs.qt6.qtdeclarative}/lib/qt-6/qml:${pkgs.quickshell}/lib/qt-6/qml";
+
           rika = craneLib.buildPackage {
             pname = cargoToml.package.name;
             version = cargoToml.package.version;
@@ -77,9 +79,14 @@
 
               mkdir -p $out/bin $out/share/rika
               cp -r ${./shell} $out/share/rika/shell
+              cp -r ${./resources} $out/share/rika/resources
 
               makeWrapper ${lib.getExe pkgs.quickshell} $out/bin/rika-shell \
                 --set-default QS_CONFIG_PATH "$out/share/rika/shell" \
+                --set-default RIKA_DATA_DIR "$out/share/rika" \
+                --set-default NIXPKGS_QT6_QML_IMPORT_PATH "${qmlImportPath}" \
+                --set-default QML_IMPORT_PATH "${qmlImportPath}" \
+                --set-default QML2_IMPORT_PATH "${qmlImportPath}" \
                 --prefix PATH : ${lib.makeBinPath [ rika ]}
 
               runHook postInstall
@@ -120,6 +127,7 @@
             pkgs.rust-analyzer
 
             pkgs.quickshell
+            pkgs.qt6.qt5compat
             pkgs.qt6.qtdeclarative
             pkgs.qt6.qttools
 
@@ -129,9 +137,8 @@
             pkgs.xdg-utils
           ];
 
-          qmlImportPath = "${pkgs.qt6.qtdeclarative}/lib/qt-6/qml:${pkgs.quickshell}/lib/qt-6/qml";
-
           shellHook = ''
+            export RIKA_DATA_DIR="$PWD"
             export RIKA_LAUNCHER_SOCKET="$XDG_RUNTIME_DIR/rika-launcher.sock"
           '';
         in
