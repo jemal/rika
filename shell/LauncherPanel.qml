@@ -41,6 +41,45 @@ Rectangle {
     positionSelectedResult();
   }
 
+  function handleAltNavigation(event) {
+    if (!(event.modifiers & Qt.AltModifier)) {
+      return false;
+    }
+
+    const count = launcher.filteredResults().length;
+
+    if (event.key === Qt.Key_J && count > 0) {
+      selectNextResult();
+      return true;
+    }
+
+    if (event.key === Qt.Key_K && count > 0) {
+      selectPreviousResult();
+      return true;
+    }
+
+    if (event.key === Qt.Key_H) {
+      input.cursorPosition = Math.max(0, input.cursorPosition - 1);
+      return true;
+    }
+
+    if (event.key === Qt.Key_L) {
+      input.cursorPosition = Math.min(input.length, input.cursorPosition + 1);
+      return true;
+    }
+
+    return false;
+  }
+
+  function handleKeybind(event) {
+    if (handleAltNavigation(event)) {
+      event.accepted = true;
+      return true;
+    }
+
+    return false;
+  }
+
   radius: 8
   color: launcher.surfaceColor
   border.color: launcher.outlineColor
@@ -87,6 +126,10 @@ Rectangle {
 
         Keys.onPressed: event => {
           const count = root.launcher.filteredResults().length;
+
+          if (root.handleKeybind(event)) {
+            return;
+          }
 
           if (event.key === Qt.Key_Escape) {
             root.launcher.closeLauncher();
