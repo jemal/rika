@@ -1,10 +1,42 @@
 use crate::{
     config::Config,
     provider::Provider,
-    providers::desktop_provider::DesktopProvider,
+    providers::{
+        command_provider::CommandProvider,
+        desktop_provider::DesktopProvider,
+    },
 };
 
+pub mod command_provider;
 pub mod desktop_provider;
+
+struct ProviderSpec {
+    id: &'static str,
+    enabled: fn(&Config) -> bool,
+    build: fn(&Config) -> Box<dyn Provider>,
+    reload: ReloadMode,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ReloadMode {
+    Preserve,
+    Rebuild,
+}
+
+const PROVIDERS: &[ProviderSpec] = &[
+    ProviderSpec {
+        id: "desktop",
+        enabled: |config| config.providers.desktop.enabled,
+        build: |_| Box::new(DesktopProvider::new()),
+        reload: ReloadMode::Preserve,
+    },
+    ProviderSpec {
+        id: "commands",
+        enabled: |config| config.providers.commands.enabled,
+        build: |config| Box::new(CommandProvider::new(&config.providers.commands)),
+        reload: ReloadMode::Rebuild,
+    },
+];
 
 /// Build the initial providers.
 pub fn build(config: &Config) -> Vec<Box<dyn Provider>> {
@@ -14,27 +46,26 @@ pub fn build(config: &Config) -> Vec<Box<dyn Provider>> {
     providers
 }
 
-/// Prune and add new providers, if any.
+/// Apply provider config by removing, adding, or rebuilding providers.
 pub fn update(providers: &mut Vec<Box<dyn Provider>>, config: &Config) {
-    ensure_provider(
-        providers,
-        "desktop",
-        config.providers.desktop.enabled,
-        || Box::new(DesktopProvider::new()),
-    );
-}
+    for spec in PROVIDERS {
+        let index = providers
+            .iter()
+            .position(|provider| provider.id() == spec.id);
 
-fn ensure_provider(
-    providers: &mut Vec<Box<dyn Provider>>,
-    id: &'static str,
-    enabled: bool,
-    build: impl FnOnce() -> Box<dyn Provider>,
-) {
-    let exists = providers.iter().any(|provider| provider.id() == id);
-
-    match (enabled, exists) {
-        (true, false) => providers.push(build()),
-        (false, true) => providers.retain(|provider| provider.id() != id),
-        _ => {}
+        match (spec.enabled)(config) {
+            false => {
+                if let Some(index) = index {
+                    providers.remove(index);
+                }
+            }
+            true => match index {
+                None => providers.push((spec.build)(config)),
+                Some(index) if spec.reload == ReloadMode::Rebuild => {
+                    providers[index] = (spec.build)(config);
+                }
+                Some(_) => {}
+            },
+        }
     }
 }

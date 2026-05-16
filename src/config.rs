@@ -6,14 +6,15 @@ use serde::{
     Serialize,
 };
 
-use crate::providers::desktop_provider::DesktopProviderConfig;
+use crate::providers::{
+    command_provider::CommandProviderConfig,
+    desktop_provider::DesktopProviderConfig,
+};
 
 #[derive(Default, Clone, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
 pub struct Config {
-    #[serde(default)]
     pub launcher: Launcher,
-
-    #[serde(default)]
     pub providers: Providers,
 }
 
@@ -70,9 +71,10 @@ pub enum LauncherWindowAnchor {
 }
 
 #[derive(Default, Clone, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
 pub struct Providers {
-    #[serde(default)]
     pub desktop: DesktopProviderConfig,
+    pub commands: CommandProviderConfig,
 }
 
 impl Config {

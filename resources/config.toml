@@ -13,3 +13,7 @@ margin = 320
 
 [providers.desktop]
 enabled = true
+
+[providers.commands]
+enabled = true
+cmds = []
