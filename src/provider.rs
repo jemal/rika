@@ -16,4 +16,6 @@ pub struct SearchResult {
     pub icon: String,
     pub score: f32,
     pub actions: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub autocomplete: Option<String>,
 }

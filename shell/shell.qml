@@ -111,6 +111,7 @@ PanelWindow {
     results = [];
     ipcError = "";
     footerStatus = "";
+    panel.resetInput();
   }
 
   function toggleLauncher() {
@@ -135,8 +136,13 @@ PanelWindow {
 
     const result = results[selectedIndex];
     const action = result.actions.length > 0 ? result.actions[0] : "open";
+
+    if (action === "noop") {
+      closeLauncher();
+      return;
+    }
+
     ipc.activate(result.provider, result.id, action);
-    closeLauncher();
   }
 
   visible: shown
@@ -207,6 +213,10 @@ PanelWindow {
       launcher.ipcError = "";
     }
 
+    onActivated: (provider, id, action) => {
+      launcher.closeLauncher();
+    }
+
     onErrorReceived: message => {
       if (launcher.primingInitialResults && !launcher.open) {
         launcher.primingInitialResults = false;
@@ -216,7 +226,10 @@ PanelWindow {
       launcher.results = [];
       launcher.ipcError = message;
       launcher.footerStatus = "";
-      launcher.openLauncher();
+
+      if (!launcher.open) {
+        launcher.openLauncher();
+      }
     }
 
     onRefreshed: (responseRequestId, config, errors) => {

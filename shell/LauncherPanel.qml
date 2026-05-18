@@ -8,13 +8,29 @@ Rectangle {
   id: root
 
   required property var launcher
+  property bool applyingAutocomplete: false
 
   function focusSearchInput() {
     input.forceActiveFocus();
   }
 
+  function resetInput() {
+    input.text = "";
+  }
+
   function positionSelectedResult() {
     results.positionViewAtIndex(launcher.selectedIndex, ListView.Contain);
+  }
+
+  function applyAutocomplete() {
+    const results = launcher.filteredResults();
+    const result = results[launcher.selectedIndex];
+    if (result && result.autocomplete) {
+      root.applyingAutocomplete = true;
+      input.text = result.autocomplete;
+      input.cursorPosition = input.text.length;
+      root.applyingAutocomplete = false;
+    }
   }
 
   function selectNextResult() {
@@ -27,6 +43,7 @@ Rectangle {
     const currentIndex = Math.max(0, Math.min(launcher.selectedIndex, count - 1));
     launcher.selectedIndex = (currentIndex + 1) % count;
     positionSelectedResult();
+    applyAutocomplete();
   }
 
   function selectPreviousResult() {
@@ -39,6 +56,7 @@ Rectangle {
     const currentIndex = Math.max(0, Math.min(launcher.selectedIndex, count - 1));
     launcher.selectedIndex = currentIndex === 0 ? count - 1 : currentIndex - 1;
     positionSelectedResult();
+    applyAutocomplete();
   }
 
   function handleAltNavigation(event) {
@@ -115,10 +133,11 @@ Rectangle {
         background: null
 
         onTextChanged: {
-          if (root.launcher.query === text) {
+          if (root.applyingAutocomplete || root.launcher.query === text) {
             return;
           }
 
+          root.launcher.ipcError = "";
           root.launcher.query = text;
           root.launcher.selectedIndex = 0;
           root.launcher.sendQuery(text);
@@ -207,16 +226,32 @@ Rectangle {
         launcher: root.launcher
       }
 
-      Text {
+      Column {
         anchors.centerIn: parent
         width: parent.width - 32
-        horizontalAlignment: Text.AlignHCenter
-        text: root.launcher.ipcError.length > 0 ? root.launcher.ipcError : "No results"
-        color: root.launcher.ipcError.length > 0 ? root.launcher.errorColor : root.launcher.mutedTextColor
-        font.family: root.launcher.fontFamily
-        font.pixelSize: root.launcher.fontSize
-        wrapMode: Text.Wrap
+        spacing: 6
         visible: results.count === 0
+
+        Text {
+          width: parent.width
+          horizontalAlignment: Text.AlignHCenter
+          text: root.launcher.ipcError.length > 0 ? root.launcher.ipcError : "No results"
+          color: root.launcher.ipcError.length > 0 ? root.launcher.errorColor : root.launcher.mutedTextColor
+          font.family: root.launcher.fontFamily
+          font.pixelSize: root.launcher.ipcError.length > 0 ? root.launcher.fontSize + 2 : root.launcher.fontSize
+          font.weight: root.launcher.ipcError.length > 0 ? Font.Medium : Font.Normal
+          wrapMode: Text.Wrap
+        }
+
+        Text {
+          width: parent.width
+          horizontalAlignment: Text.AlignHCenter
+          text: "Type to dismiss"
+          color: root.launcher.mutedTextColor
+          font.family: root.launcher.fontFamily
+          font.pixelSize: root.launcher.smallFontSize
+          visible: root.launcher.ipcError.length > 0
+        }
       }
     }
 

@@ -7,8 +7,9 @@ use serde::{
 };
 
 use crate::providers::{
-    commands::CommandsProviderConfig,
     apps::AppsProviderConfig,
+    commands::CommandsProviderConfig,
+    web_search::WebSearchProviderConfig,
 };
 
 #[derive(Default, Clone, Serialize, Deserialize)]
@@ -75,6 +76,7 @@ pub enum LauncherWindowAnchor {
 pub struct Providers {
     pub apps: AppsProviderConfig,
     pub commands: CommandsProviderConfig,
+    pub web_search: WebSearchProviderConfig,
 }
 
 impl Config {
