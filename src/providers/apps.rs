@@ -33,24 +33,33 @@ pub struct App {
 
 pub struct AppsProvider {
     apps: Vec<App>,
+    terminal_command: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
 pub struct AppsProviderConfig {
     pub enabled: bool,
+    pub terminal_command: Option<String>,
 }
 
 impl Default for AppsProviderConfig {
     fn default() -> Self {
-        Self { enabled: true }
+        Self {
+            enabled: true,
+            terminal_command: None,
+        }
     }
 }
 
 impl AppsProvider {
-    pub fn new() -> Self {
+    pub fn new(config: &AppsProviderConfig) -> Self {
         let apps = Self::build_apps();
 
-        Self { apps }
+        Self {
+            apps,
+            terminal_command: config.terminal_command.clone(),
+        }
     }
 
     fn build_apps() -> Vec<App> {
@@ -122,6 +131,7 @@ impl Provider for AppsProvider {
                         .to_string(),
                     score,
                     actions: vec!["open".to_string()],
+                    autocomplete: None,
                 });
             }
         }
@@ -148,10 +158,35 @@ impl Provider for AppsProvider {
                     bail!("desktop entry exec is empty: {id}");
                 };
 
-                let mut child = Command::new(program)
-                    .args(args)
-                    .spawn()
-                    .context("while attempting to spawn desktop app")?;
+                let mut child = if app.entry.terminal() {
+                    let term_cmd = self
+                        .terminal_command
+                        .as_deref()
+                        .map(|s| s.to_string())
+                        .or_else(|| {
+                            std::env::var("TERMINAL")
+                                .ok()
+                                .map(|t| format!("{t} -e"))
+                        })
+                        .context("Terminal=true but no terminal configured (set terminal_command or $TERMINAL)")?;
+
+                    let mut parts = term_cmd.split_whitespace();
+                    let term_bin = parts
+                        .next()
+                        .expect("terminal_command is non-empty after trim");
+
+                    Command::new(term_bin)
+                        .args(parts)
+                        .arg(program)
+                        .args(args)
+                        .spawn()
+                        .context("while attempting to spawn terminal app")?
+                } else {
+                    Command::new(program)
+                        .args(args)
+                        .spawn()
+                        .context("while attempting to spawn desktop app")?
+                };
 
                 thread::spawn(move || {
                     if let Err(err) = child.wait() {

@@ -4,11 +4,13 @@ use crate::{
     providers::{
         apps::AppsProvider,
         commands::CommandsProvider,
+        web_search::WebSearchProvider,
     },
 };
 
 pub mod apps;
 pub mod commands;
+pub mod web_search;
 
 struct ProviderSpec {
     id: &'static str,
@@ -27,13 +29,19 @@ const PROVIDERS: &[ProviderSpec] = &[
     ProviderSpec {
         id: "apps",
         enabled: |config| config.providers.apps.enabled,
-        build: |_| Box::new(AppsProvider::new()),
+        build: |config| Box::new(AppsProvider::new(&config.providers.apps)),
         reload: ReloadMode::Preserve,
     },
     ProviderSpec {
         id: "commands",
         enabled: |config| config.providers.commands.enabled,
         build: |config| Box::new(CommandsProvider::new(&config.providers.commands)),
+        reload: ReloadMode::Rebuild,
+    },
+    ProviderSpec {
+        id: "web_search",
+        enabled: |config| config.providers.web_search.enabled,
+        build: |config| Box::new(WebSearchProvider::new(&config.providers.web_search)),
         reload: ReloadMode::Rebuild,
     },
 ];
