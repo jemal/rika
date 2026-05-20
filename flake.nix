@@ -43,7 +43,13 @@
 
           cargoToml = fromTOML (builtins.readFile ./Cargo.toml);
 
-          src = craneLib.cleanCargoSource ./.;
+          src = lib.cleanSourceWith {
+            src = lib.cleanSource ./.;
+            filter =
+              path: type:
+              (craneLib.filterCargoSources path type)
+              || lib.hasSuffix "/resources/bangs.json" (toString path);
+          };
 
           cargoArtifacts = craneLib.buildDepsOnly {
             pname = cargoToml.package.name;
