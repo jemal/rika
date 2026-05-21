@@ -214,6 +214,7 @@ mod tests {
     };
 
     use super::*;
+    use crate::provider::SearchAction;
 
     fn temp_state_path(test_name: &str) -> PathBuf {
         let nanos = SystemTime::now()
@@ -234,7 +235,8 @@ mod tests {
             subtitle: String::new(),
             icon: String::new(),
             score,
-            actions: vec!["open".to_string()],
+            default_action: "open".to_string(),
+            actions: vec![SearchAction::new("open", "Open", "")],
             autocomplete: None,
         }
     }

@@ -14,6 +14,7 @@ use serde::{
 
 use crate::provider::{
     Provider,
+    SearchAction,
     SearchResult,
 };
 
@@ -71,7 +72,8 @@ impl Provider for CommandsProvider {
                     subtitle: String::new(),
                     icon: "builtin:terminal".to_string(),
                     score: 1.0,
-                    actions: vec!["run".to_string()],
+                    default_action: "run".to_string(),
+                    actions: vec![SearchAction::new("run", "Run", "builtin:terminal")],
                     autocomplete: None,
                 });
             }
@@ -107,5 +109,31 @@ impl Provider for CommandsProvider {
 
     fn refresh(&mut self) -> anyhow::Result<()> {
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn command_result_default_action_exists_in_actions() {
+        let provider = CommandsProvider::new(&CommandsProviderConfig {
+            enabled: true,
+            cmds: vec![Command {
+                name: "Example".to_string(),
+                command: "true".to_string(),
+            }],
+        });
+
+        let results = provider.search("example");
+
+        assert_eq!(results.len(), 1);
+        assert!(
+            results[0]
+                .actions
+                .iter()
+                .any(|action| action.id == results[0].default_action)
+        );
     }
 }

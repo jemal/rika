@@ -15,7 +15,25 @@ pub struct SearchResult {
     pub subtitle: String,
     pub icon: String,
     pub score: f32,
-    pub actions: Vec<String>,
+    pub default_action: String,
+    pub actions: Vec<SearchAction>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub autocomplete: Option<String>,
+}
+
+#[derive(Clone, Serialize)]
+pub struct SearchAction {
+    pub id: String,
+    pub label: String,
+    pub icon: String,
+}
+
+impl SearchAction {
+    pub fn new(id: impl Into<String>, label: impl Into<String>, icon: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            label: label.into(),
+            icon: icon.into(),
+        }
+    }
 }

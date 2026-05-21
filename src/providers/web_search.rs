@@ -15,6 +15,7 @@ use serde::{
 
 use crate::provider::{
     Provider,
+    SearchAction,
     SearchResult,
 };
 
@@ -143,7 +144,8 @@ impl Provider for WebSearchProvider {
                         subtitle: String::new(),
                         icon: "builtin:globe".to_string(),
                         score: 1.0,
-                        actions: vec!["noop".to_string()],
+                        default_action: "noop".to_string(),
+                        actions: vec![SearchAction::new("noop", "Complete", "builtin:search")],
                         autocomplete: Some(bang.alias.clone()),
                     });
                 }
@@ -151,17 +153,19 @@ impl Provider for WebSearchProvider {
             Some((alias, search_query)) => {
                 if let Some(bang) = self.bangs.iter().find(|b| b.alias == alias) {
                     let search_query = search_query.trim();
-                    let (id, title, actions) = if search_query.is_empty() {
+                    let (id, title, default_action, actions) = if search_query.is_empty() {
                         (
                             alias.to_string(),
                             format!("Search {}", bang.name),
-                            vec!["noop".to_string()],
+                            "noop".to_string(),
+                            vec![SearchAction::new("noop", "Complete", "builtin:search")],
                         )
                     } else {
                         (
                             format!("{alias}:{search_query}"),
                             format!("Search {} - {search_query}", bang.name),
-                            vec!["search".to_string()],
+                            "search".to_string(),
+                            vec![SearchAction::new("search", "Search", "builtin:globe")],
                         )
                     };
 
@@ -172,6 +176,7 @@ impl Provider for WebSearchProvider {
                         subtitle: String::new(),
                         icon: "builtin:globe".to_string(),
                         score: 1.0,
+                        default_action,
                         actions,
                         autocomplete: None,
                     });
@@ -256,6 +261,28 @@ mod tests {
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].provider, "web_search");
         assert_eq!(results[0].id, "!gh:rust anyhow");
-        assert_eq!(results[0].actions, vec!["search"]);
+        assert_eq!(results[0].default_action, "search");
+        assert!(
+            results[0]
+                .actions
+                .iter()
+                .any(|action| action.id == "search")
+        );
+    }
+
+    #[test]
+    fn bang_suggestion_default_action_exists_in_actions() {
+        let results = provider().search("!gh");
+        let result = results
+            .iter()
+            .find(|result| result.id == "!gh")
+            .expect("GitHub bang should exist");
+
+        assert!(
+            result
+                .actions
+                .iter()
+                .any(|action| action.id == result.default_action)
+        );
     }
 }

@@ -11,7 +11,9 @@ PanelWindow {
 
   property bool open: false
   property bool shown: false
+  property bool actionMode: false
   property int selectedIndex: 0
+  property int selectedActionIndex: 0
   property string query: ""
   property var results: []
   property var iconWarmResults: []
@@ -106,7 +108,9 @@ PanelWindow {
 
   function closeLauncher() {
     open = false;
+    actionMode = false;
     selectedIndex = 0;
+    selectedActionIndex = 0;
     query = "";
     results = [];
     ipcError = "";
@@ -122,27 +126,112 @@ PanelWindow {
     return results;
   }
 
+  function selectedResult() {
+    const results = filteredResults();
+    return selectedIndex >= 0 && selectedIndex < results.length ? results[selectedIndex] : null;
+  }
+
+  function selectedActions() {
+    const result = selectedResult();
+    return result && result.actions ? result.actions : [];
+  }
+
+  function selectedAction() {
+    const actions = selectedActions();
+    return selectedActionIndex >= 0 && selectedActionIndex < actions.length ? actions[selectedActionIndex] : null;
+  }
+
   function clampSelection() {
     const count = filteredResults().length;
     selectedIndex = count === 0 ? 0 : Math.max(0, Math.min(selectedIndex, count - 1));
+    clampActionSelection();
   }
 
-  function activateSelection() {
-    const results = filteredResults();
+  function clampActionSelection() {
+    const count = selectedActions().length;
+    selectedActionIndex = count === 0 ? 0 : Math.max(0, Math.min(selectedActionIndex, count - 1));
+  }
 
-    if (results.length === 0) {
+  function enterActionMode() {
+    const actions = selectedActions();
+
+    if (actions.length === 0) {
       return;
     }
 
-    const result = results[selectedIndex];
-    const action = result.actions.length > 0 ? result.actions[0] : "open";
+    const result = selectedResult();
+    let defaultIndex = -1;
+    for (let i = 0; i < actions.length; i += 1) {
+      if (actions[i].id === result.default_action) {
+        defaultIndex = i;
+        break;
+      }
+    }
+    selectedActionIndex = defaultIndex >= 0 ? defaultIndex : 0;
+    actionMode = true;
+  }
 
-    if (action === "noop") {
+  function exitActionMode() {
+    actionMode = false;
+    selectedActionIndex = 0;
+  }
+
+  function selectNextAction() {
+    const count = selectedActions().length;
+
+    if (count === 0) {
+      return;
+    }
+
+    selectedActionIndex = (selectedActionIndex + 1) % count;
+  }
+
+  function selectPreviousAction() {
+    const count = selectedActions().length;
+
+    if (count === 0) {
+      return;
+    }
+
+    selectedActionIndex = selectedActionIndex === 0 ? count - 1 : selectedActionIndex - 1;
+  }
+
+  function activateResultAction(result, actionId) {
+    if (!result || !actionId || actionId.length === 0) {
+      return;
+    }
+
+    if (actionId === "noop") {
       closeLauncher();
       return;
     }
 
-    ipc.activate(result.provider, result.id, action);
+    ipc.activate(result.provider, result.id, actionId);
+  }
+
+  function activateSelectedAction() {
+    const action = selectedAction();
+
+    if (!action) {
+      return;
+    }
+
+    activateResultAction(selectedResult(), action.id);
+  }
+
+  function activateSelection() {
+    if (actionMode) {
+      activateSelectedAction();
+      return;
+    }
+
+    const result = selectedResult();
+
+    if (!result) {
+      return;
+    }
+
+    activateResultAction(result, result.default_action);
   }
 
   visible: shown
@@ -209,6 +298,8 @@ PanelWindow {
 
       launcher.results = items;
       launcher.selectedIndex = 0;
+      launcher.actionMode = false;
+      launcher.selectedActionIndex = 0;
       launcher.primingInitialResults = false;
       launcher.ipcError = "";
     }

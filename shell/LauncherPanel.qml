@@ -23,6 +23,10 @@ Rectangle {
   }
 
   function applyAutocomplete() {
+    if (launcher.actionMode) {
+      return;
+    }
+
     const results = launcher.filteredResults();
     const result = results[launcher.selectedIndex];
     if (result && result.autocomplete) {
@@ -67,12 +71,20 @@ Rectangle {
     const count = launcher.filteredResults().length;
 
     if (event.key === Qt.Key_J && count > 0) {
-      selectNextResult();
+      if (root.launcher.actionMode) {
+        root.launcher.selectNextAction();
+      } else {
+        selectNextResult();
+      }
       return true;
     }
 
     if (event.key === Qt.Key_K && count > 0) {
-      selectPreviousResult();
+      if (root.launcher.actionMode) {
+        root.launcher.selectPreviousAction();
+      } else {
+        selectPreviousResult();
+      }
       return true;
     }
 
@@ -137,6 +149,7 @@ Rectangle {
             return;
           }
 
+          root.launcher.exitActionMode();
           root.launcher.ipcError = "";
           root.launcher.query = text;
           root.launcher.selectedIndex = 0;
@@ -150,7 +163,28 @@ Rectangle {
             return;
           }
 
-          if (event.key === Qt.Key_Escape) {
+          if (root.launcher.actionMode) {
+            if (event.key === Qt.Key_Escape || event.key === Qt.Key_Left || event.key === Qt.Key_Backspace) {
+              root.launcher.exitActionMode();
+              event.accepted = true;
+            } else if (event.key === Qt.Key_Down) {
+              root.launcher.selectNextAction();
+              event.accepted = true;
+            } else if (event.key === Qt.Key_Up) {
+              root.launcher.selectPreviousAction();
+              event.accepted = true;
+            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+              root.launcher.activateSelectedAction();
+              event.accepted = true;
+            }
+
+            return;
+          }
+
+          if (event.key === Qt.Key_K && event.modifiers & Qt.ControlModifier && count > 0) {
+            root.launcher.enterActionMode();
+            event.accepted = true;
+          } else if (event.key === Qt.Key_Escape) {
             root.launcher.closeLauncher();
             event.accepted = true;
           } else if (event.key === Qt.Key_R && event.modifiers & Qt.ControlModifier) {
@@ -185,6 +219,7 @@ Rectangle {
 
       Layout.fillWidth: true
       Layout.fillHeight: true
+      visible: !root.launcher.actionMode
       clip: true
       spacing: 0
       boundsBehavior: Flickable.StopAtBounds
@@ -255,6 +290,102 @@ Rectangle {
       }
     }
 
+    ListView {
+      id: actions
+
+      Layout.fillWidth: true
+      Layout.fillHeight: true
+      visible: root.launcher.actionMode
+      clip: true
+      spacing: 0
+      boundsBehavior: Flickable.StopAtBounds
+      model: root.launcher.selectedActions()
+
+      onCountChanged: root.launcher.clampActionSelection()
+
+      delegate: Rectangle {
+        id: actionRow
+
+        required property int index
+        required property var modelData
+
+        readonly property bool selected: index === root.launcher.selectedActionIndex
+        readonly property string iconSource: root.launcher.resolveIconSource(modelData.icon)
+        readonly property bool tintedIcon: modelData.icon && modelData.icon.startsWith("builtin:")
+
+        width: ListView.view.width
+        height: 34
+        radius: 5
+        color: selected ? root.launcher.hoverColor : "transparent"
+        clip: true
+
+        RowLayout {
+          anchors.fill: parent
+          anchors.leftMargin: 10
+          anchors.rightMargin: 8
+          spacing: 8
+          opacity: parent.selected ? 1 : 0.86
+
+          Item {
+            Layout.preferredWidth: 24
+            Layout.preferredHeight: 24
+            Layout.alignment: Qt.AlignVCenter
+
+            Loader {
+              id: actionIconLoader
+
+              property string resolvedSource: actionRow.iconSource
+              property color resolvedColor: actionRow.selected ? root.launcher.primaryColor : root.launcher.textColor
+
+              anchors.centerIn: parent
+              width: 18
+              height: 18
+              active: actionRow.iconSource.length > 0 && actionRow.tintedIcon
+
+              sourceComponent: TintedIcon {
+                width: 18
+                height: 18
+                source: actionIconLoader.resolvedSource
+                color: actionIconLoader.resolvedColor
+              }
+            }
+
+            Text {
+              anchors.centerIn: parent
+              horizontalAlignment: Text.AlignHCenter
+              verticalAlignment: Text.AlignVCenter
+              text: actionRow.modelData.label.length > 0 ? actionRow.modelData.label[0].toUpperCase() : "?"
+              color: actionRow.selected ? root.launcher.primaryColor : root.launcher.mutedTextColor
+              font.family: root.launcher.fontFamily
+              font.pixelSize: root.launcher.smallFontSize
+              font.weight: Font.Medium
+              visible: actionRow.iconSource.length === 0
+            }
+          }
+
+          Text {
+            Layout.fillWidth: true
+            Layout.alignment: Qt.AlignVCenter
+            text: actionRow.modelData.label
+            color: root.launcher.textColor
+            font.family: root.launcher.fontFamily
+            font.pixelSize: root.launcher.fontSize
+            font.weight: Font.Medium
+            elide: Text.ElideRight
+            maximumLineCount: 1
+          }
+        }
+
+        MouseArea {
+          anchors.fill: parent
+          hoverEnabled: true
+
+          onEntered: root.launcher.selectedActionIndex = actionRow.index
+          onClicked: root.launcher.activateSelectedAction()
+        }
+      }
+    }
+
     RowLayout {
       Layout.fillWidth: true
       Layout.preferredHeight: 22
@@ -267,6 +398,11 @@ Rectangle {
             return root.launcher.footerStatus;
           }
 
+          if (root.launcher.actionMode) {
+            const count = root.launcher.selectedActions().length;
+            return count > 0 ? `Action ${root.launcher.selectedActionIndex + 1}/${count}` : "Action 0/0";
+          }
+
           const count = root.launcher.filteredResults().length;
           return count > 0 ? `${root.launcher.selectedIndex + 1}/${count}` : "0/0";
         }
@@ -276,7 +412,7 @@ Rectangle {
       }
 
       Text {
-        text: "Open"
+        text: root.launcher.actionMode ? "Run" : "Open"
         color: root.launcher.textColor
         font.family: root.launcher.fontFamily
         font.pixelSize: root.launcher.smallFontSize
@@ -290,10 +426,25 @@ Rectangle {
       }
 
       Text {
-        text: "Refresh"
+        text: root.launcher.actionMode ? "Back" : "Actions"
         color: root.launcher.textColor
         font.family: root.launcher.fontFamily
         font.pixelSize: root.launcher.smallFontSize
+      }
+
+      Text {
+        text: root.launcher.actionMode ? "esc" : "ctrl-k"
+        color: root.launcher.mutedTextColor
+        font.family: root.launcher.fontFamily
+        font.pixelSize: root.launcher.smallFontSize
+      }
+
+      Text {
+        text: root.launcher.actionMode ? "" : "Refresh"
+        color: root.launcher.textColor
+        font.family: root.launcher.fontFamily
+        font.pixelSize: root.launcher.smallFontSize
+        visible: !root.launcher.actionMode
       }
 
       Text {
@@ -301,6 +452,7 @@ Rectangle {
         color: root.launcher.mutedTextColor
         font.family: root.launcher.fontFamily
         font.pixelSize: root.launcher.smallFontSize
+        visible: !root.launcher.actionMode
       }
 
       Text {
@@ -308,6 +460,7 @@ Rectangle {
         color: root.launcher.textColor
         font.family: root.launcher.fontFamily
         font.pixelSize: root.launcher.smallFontSize
+        visible: !root.launcher.actionMode
       }
 
       Text {
@@ -315,6 +468,7 @@ Rectangle {
         color: root.launcher.mutedTextColor
         font.family: root.launcher.fontFamily
         font.pixelSize: root.launcher.smallFontSize
+        visible: !root.launcher.actionMode
       }
     }
   }

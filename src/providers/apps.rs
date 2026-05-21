@@ -21,6 +21,7 @@ use serde::{
 
 use crate::provider::{
     Provider,
+    SearchAction,
     SearchResult,
 };
 
@@ -130,7 +131,8 @@ impl Provider for AppsProvider {
                         .unwrap_or("application-x-executable")
                         .to_string(),
                     score,
-                    actions: vec!["open".to_string()],
+                    default_action: "open".to_string(),
+                    actions: vec![SearchAction::new("open", "Open", "")],
                     autocomplete: None,
                 });
             }
