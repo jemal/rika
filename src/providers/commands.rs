@@ -14,6 +14,7 @@ use serde::{
 
 use crate::provider::{
     Provider,
+    ResultKind,
     SearchAction,
     SearchResult,
 };
@@ -68,6 +69,8 @@ impl Provider for CommandsProvider {
                 results.push(SearchResult {
                     id: cmd.name.clone(),
                     provider: self.id(),
+                    kind: ResultKind::Command,
+                    section: "Commands".to_string(),
                     title: cmd.name.to_string(),
                     subtitle: String::new(),
                     icon: "builtin:terminal".to_string(),
@@ -129,6 +132,8 @@ mod tests {
         let results = provider.search("example");
 
         assert_eq!(results.len(), 1);
+        assert_eq!(results[0].kind, ResultKind::Command);
+        assert_eq!(results[0].section, "Commands");
         assert!(
             results[0]
                 .actions

@@ -31,7 +31,6 @@ PanelWindow {
   property int windowHeight: 316
   property int windowMargin: 320
   readonly property int visibleResultCount: Math.min(filteredResults().length, maxVisibleResults)
-  readonly property int resultAreaHeight: filteredResults().length === 0 ? 88 : visibleResultCount * 34
   readonly property int panelWidth: Math.max(240, Math.min(width - 48, windowWidth))
   readonly property int panelHeight: Math.max(140, Math.min(height - 96, windowHeight))
   readonly property int panelX: Math.round((width - panelWidth) / 2)
@@ -129,6 +128,22 @@ PanelWindow {
   function selectedResult() {
     const results = filteredResults();
     return selectedIndex >= 0 && selectedIndex < results.length ? results[selectedIndex] : null;
+  }
+
+  function shouldShowSectionHeader(index) {
+    const results = filteredResults();
+    const result = index >= 0 && index < results.length ? results[index] : null;
+
+    if (!result || !result.section || result.section.length === 0) {
+      return false;
+    }
+
+    if (index === 0) {
+      return true;
+    }
+
+    const previous = results[index - 1];
+    return !previous || previous.section !== result.section;
   }
 
   function selectedActions() {

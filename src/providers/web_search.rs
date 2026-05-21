@@ -15,6 +15,7 @@ use serde::{
 
 use crate::provider::{
     Provider,
+    ResultKind,
     SearchAction,
     SearchResult,
 };
@@ -140,6 +141,8 @@ impl Provider for WebSearchProvider {
                     results.push(SearchResult {
                         id: bang.alias.clone(),
                         provider: self.id(),
+                        kind: ResultKind::Web,
+                        section: "Web".to_string(),
                         title: format!("Search {}", bang.name),
                         subtitle: String::new(),
                         icon: "builtin:globe".to_string(),
@@ -172,6 +175,8 @@ impl Provider for WebSearchProvider {
                     results.push(SearchResult {
                         id,
                         provider: self.id(),
+                        kind: ResultKind::Web,
+                        section: "Web".to_string(),
                         title,
                         subtitle: String::new(),
                         icon: "builtin:globe".to_string(),
@@ -260,6 +265,8 @@ mod tests {
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].provider, "web_search");
+        assert_eq!(results[0].kind, ResultKind::Web);
+        assert_eq!(results[0].section, "Web");
         assert_eq!(results[0].id, "!gh:rust anyhow");
         assert_eq!(results[0].default_action, "search");
         assert!(

@@ -21,6 +21,7 @@ use serde::{
 
 use crate::provider::{
     Provider,
+    ResultKind,
     SearchAction,
     SearchResult,
 };
@@ -123,6 +124,8 @@ impl Provider for AppsProvider {
                 results.push(SearchResult {
                     id: app.file_name.clone(),
                     provider: self.id(),
+                    kind: ResultKind::App,
+                    section: "Apps".to_string(),
                     title: app.name.to_string(),
                     subtitle: String::new(),
                     icon: app

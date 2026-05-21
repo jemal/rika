@@ -214,7 +214,10 @@ mod tests {
     };
 
     use super::*;
-    use crate::provider::SearchAction;
+    use crate::provider::{
+        ResultKind,
+        SearchAction,
+    };
 
     fn temp_state_path(test_name: &str) -> PathBuf {
         let nanos = SystemTime::now()
@@ -231,6 +234,8 @@ mod tests {
         SearchResult {
             id: id.to_string(),
             provider,
+            kind: ResultKind::App,
+            section: "Apps".to_string(),
             title: id.to_string(),
             subtitle: String::new(),
             icon: String::new(),

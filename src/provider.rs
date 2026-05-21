@@ -11,6 +11,8 @@ pub trait Provider: Send {
 pub struct SearchResult {
     pub id: String,
     pub provider: &'static str,
+    pub kind: ResultKind,
+    pub section: String,
     pub title: String,
     pub subtitle: String,
     pub icon: String,
@@ -19,6 +21,14 @@ pub struct SearchResult {
     pub actions: Vec<SearchAction>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub autocomplete: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ResultKind {
+    App,
+    Command,
+    Web,
 }
 
 #[derive(Clone, Serialize)]

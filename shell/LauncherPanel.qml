@@ -18,8 +18,40 @@ Rectangle {
     input.text = "";
   }
 
-  function positionSelectedResult() {
-    results.positionViewAtIndex(launcher.selectedIndex, ListView.Contain);
+  function revealSelectedResult() {
+    const item = results.itemAtIndex(launcher.selectedIndex);
+    if (!item) {
+      return false;
+    }
+
+    const top = item.y;
+    const bottom = item.y + item.height;
+    const visibleTop = results.contentY;
+    const visibleBottom = results.contentY + results.height;
+    const maxContentY = Math.max(0, results.contentHeight - results.height);
+
+    if (top < visibleTop) {
+      results.contentY = Math.max(0, Math.min(maxContentY, top));
+    } else if (bottom > visibleBottom) {
+      results.contentY = Math.max(0, Math.min(maxContentY, bottom - results.height));
+    }
+
+    return true;
+  }
+
+  function positionSelectedResult(positionMode) {
+    const mode = positionMode === undefined ? ListView.Contain : positionMode;
+
+    if (!revealSelectedResult()) {
+      results.positionViewAtIndex(launcher.selectedIndex, mode);
+    }
+
+    Qt.callLater(() => {
+      if (!revealSelectedResult()) {
+        results.positionViewAtIndex(launcher.selectedIndex, mode);
+        Qt.callLater(revealSelectedResult);
+      }
+    });
   }
 
   function applyAutocomplete() {
@@ -46,7 +78,7 @@ Rectangle {
 
     const currentIndex = Math.max(0, Math.min(launcher.selectedIndex, count - 1));
     launcher.selectedIndex = (currentIndex + 1) % count;
-    positionSelectedResult();
+    positionSelectedResult(launcher.selectedIndex === 0 ? ListView.Beginning : ListView.Contain);
     applyAutocomplete();
   }
 
@@ -59,7 +91,7 @@ Rectangle {
 
     const currentIndex = Math.max(0, Math.min(launcher.selectedIndex, count - 1));
     launcher.selectedIndex = currentIndex === 0 ? count - 1 : currentIndex - 1;
-    positionSelectedResult();
+    positionSelectedResult(launcher.selectedIndex === count - 1 ? ListView.End : ListView.Contain);
     applyAutocomplete();
   }
 
@@ -258,6 +290,7 @@ Rectangle {
         width: ListView.view.width
         rowIndex: index
         result: modelData
+        showSectionHeader: root.launcher.shouldShowSectionHeader(index)
         launcher: root.launcher
       }
 

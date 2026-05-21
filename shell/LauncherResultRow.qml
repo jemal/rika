@@ -10,28 +10,38 @@ Rectangle {
   required property int rowIndex
   required property var result
   required property var launcher
+  required property bool showSectionHeader
   readonly property bool showSubtitle: result.subtitle.length > 0 && result.subtitle !== result.title
   readonly property string iconSource: launcher.resolveIconSource(result.icon)
   readonly property bool tintedIcon: result.icon.startsWith("builtin:")
   readonly property bool selected: rowIndex === launcher.selectedIndex
 
   width: ListView.view.width
-  height: 34
+  height: showSectionHeader ? 54 : 34
   radius: 5
-  color: selected ? launcher.hoverColor : "transparent"
+  color: "transparent"
   clip: true
 
-  Behavior on color {
-    ColorAnimation {
-      duration: 120
-      easing.type: Easing.OutCubic
+  Rectangle {
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    height: 34
+    radius: 5
+    color: root.selected ? root.launcher.hoverColor : "transparent"
+
+    Behavior on color {
+      ColorAnimation {
+        duration: 120
+        easing.type: Easing.OutCubic
+      }
     }
   }
 
   Rectangle {
     anchors.left: parent.left
     anchors.leftMargin: 2
-    anchors.verticalCenter: parent.verticalCenter
+    y: (root.showSectionHeader ? 20 : 0) + Math.round((34 - height) / 2)
     width: 2
     height: root.selected ? 18 : 0
     radius: 1
@@ -54,7 +64,10 @@ Rectangle {
   }
 
   RowLayout {
-    anchors.fill: parent
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.bottom: parent.bottom
+    height: 34
     anchors.leftMargin: 10
     anchors.rightMargin: 8
     spacing: 8
@@ -143,6 +156,24 @@ Rectangle {
         visible: root.showSubtitle
       }
     }
+  }
+
+  Text {
+    anchors.left: parent.left
+    anchors.right: parent.right
+    anchors.top: parent.top
+    anchors.leftMargin: 10
+    anchors.rightMargin: 8
+    height: 20
+    text: root.result.section
+    color: Qt.alpha(root.launcher.mutedTextColor, 0.72)
+    font.family: root.launcher.fontFamily
+    font.pixelSize: root.launcher.tinyFontSize
+    font.weight: Font.Medium
+    verticalAlignment: Text.AlignVCenter
+    elide: Text.ElideRight
+    maximumLineCount: 1
+    visible: root.showSectionHeader
   }
 
   MouseArea {
