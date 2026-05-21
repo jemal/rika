@@ -11,9 +11,13 @@ width = 580
 height = 316
 margin = 320
 
-[providers.desktop]
+[providers.apps]
 enabled = true
 
 [providers.commands]
 enabled = true
 cmds = []
+
+[providers.web_search]
+enabled = true
+browser_command = ""

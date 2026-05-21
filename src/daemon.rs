@@ -30,11 +30,16 @@ use crate::{
     },
     provider::Provider,
     providers,
+    usage::{
+        UsageStore,
+        sort_results,
+    },
 };
 
 pub struct DaemonState {
     config: Config,
     providers: Vec<Box<dyn Provider>>,
+    usage: UsageStore,
 }
 
 type SharedState = Arc<Mutex<DaemonState>>;
@@ -62,8 +67,13 @@ impl Daemon {
 
         let config = Config::load_config().context("while reading config file")?;
         let providers = providers::build(&config);
+        let usage = UsageStore::load();
 
-        let state = Arc::new(Mutex::new(DaemonState { config, providers }));
+        let state = Arc::new(Mutex::new(DaemonState {
+            config,
+            providers,
+            usage,
+        }));
 
         Ok(Self { listener, state })
     }
@@ -130,6 +140,9 @@ impl DaemonState {
             results.extend(provider.search(&query));
         }
 
+        self.usage.boost_results(&mut results);
+        sort_results(&mut results);
+
         ServerResponse::Results {
             request_id,
             items: results,
@@ -144,11 +157,19 @@ impl DaemonState {
         };
 
         match provider_impl.activate(&id, &action) {
-            Ok(()) => ServerResponse::Activated {
-                provider,
-                id,
-                action,
-            },
+            Ok(()) => {
+                if self.usage.record_activation(&provider, &id, &action) {
+                    if let Err(err) = self.usage.save() {
+                        eprintln!("failed to save usage state: {err}");
+                    }
+                }
+
+                ServerResponse::Activated {
+                    provider,
+                    id,
+                    action,
+                }
+            }
             Err(err) => ServerResponse::Error {
                 message: err.to_string(),
             },

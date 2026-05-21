@@ -20,6 +20,8 @@ use crate::provider::{
 
 include!(concat!(env!("OUT_DIR"), "/builtin_bangs.rs"));
 
+const BANG_SUGGESTION_LIMIT: usize = 512;
+
 pub struct WebSearchProvider {
     bangs: Vec<Bang>,
     browser_command: String,
@@ -122,13 +124,17 @@ impl Provider for WebSearchProvider {
         let mut results = vec![];
         let query = query.to_lowercase();
 
+        if !query.starts_with('!') {
+            return results;
+        }
+
         match query.split_once(' ') {
             None => {
                 for bang in self
                     .bangs
                     .iter()
                     .filter(|b| b.alias.starts_with(query.as_str()))
-                    .take(20)
+                    .take(BANG_SUGGESTION_LIMIT)
                 {
                     results.push(SearchResult {
                         id: bang.alias.clone(),
@@ -215,5 +221,41 @@ impl Provider for WebSearchProvider {
 
     fn refresh(&mut self) -> anyhow::Result<()> {
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn provider() -> WebSearchProvider {
+        WebSearchProvider::new(&WebSearchProviderConfig {
+            enabled: true,
+            browser_command: "true".to_string(),
+        })
+    }
+
+    #[test]
+    fn normal_queries_do_not_return_bang_results() {
+        let results = provider().search("gh");
+
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn bang_queries_return_bang_suggestions() {
+        let results = provider().search("!gh");
+
+        assert!(results.iter().any(|result| result.id == "!gh"));
+    }
+
+    #[test]
+    fn bang_search_queries_return_search_action() {
+        let results = provider().search("!gh rust anyhow");
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].provider, "web_search");
+        assert_eq!(results[0].id, "!gh:rust anyhow");
+        assert_eq!(results[0].actions, vec!["search"]);
     }
 }

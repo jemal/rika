@@ -3,6 +3,7 @@ mod daemon;
 mod ipc;
 mod provider;
 mod providers;
+mod usage;
 
 use std::{
     io,
