@@ -21,6 +21,7 @@ use serde::{
 use crate::provider::SearchResult;
 
 const USAGE_BOOST_SCALE: f32 = 0.15;
+const RECENT_SECTION: &str = "Recent";
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct UsageKey {
@@ -131,6 +132,37 @@ impl UsageStore {
         }
     }
 
+    pub fn recent_results(&self, results: &[SearchResult], limit: usize) -> Vec<SearchResult> {
+        let result_by_key: HashMap<UsageKey, &SearchResult> = results
+            .iter()
+            .map(|result| (result_usage_key(result.provider, &result.id), result))
+            .collect();
+        let mut records: Vec<&UsageRecord> = self.records.values().collect();
+        records.sort_by(|a, b| {
+            b.last_used_at_unix
+                .cmp(&a.last_used_at_unix)
+                .then_with(|| b.activation_count.cmp(&a.activation_count))
+                .then_with(|| a.provider.cmp(&b.provider))
+                .then_with(|| a.id.cmp(&b.id))
+        });
+
+        records
+            .into_iter()
+            .filter_map(|record| {
+                let key = UsageKey {
+                    provider: record.provider.clone(),
+                    id: record.id.clone(),
+                };
+                result_by_key.get(&key).map(|result| {
+                    let mut recent = (*result).clone();
+                    recent.section = RECENT_SECTION.to_string();
+                    recent
+                })
+            })
+            .take(limit)
+            .collect()
+    }
+
     pub fn save(&self) -> anyhow::Result<()> {
         let Some(path) = &self.path else {
             return Ok(());
@@ -154,21 +186,37 @@ impl UsageStore {
 }
 
 pub fn sort_results(results: &mut [SearchResult]) {
-    results.sort_by(global_result_cmp);
-
-    let mut section_order = HashMap::new();
-    for result in results.iter() {
-        let next_index = section_order.len();
-        section_order
-            .entry(result.section.clone())
-            .or_insert(next_index);
-    }
-
     results.sort_by(|a, b| {
-        section_order[&a.section]
-            .cmp(&section_order[&b.section])
+        section_rank(&a.section)
+            .cmp(&section_rank(&b.section))
             .then_with(|| global_result_cmp(a, b))
     });
+}
+
+pub fn remove_recent_duplicates(results: &mut Vec<SearchResult>) {
+    let recent_keys: Vec<UsageKey> = results
+        .iter()
+        .filter(|result| result.section == RECENT_SECTION)
+        .map(|result| result_usage_key(result.provider, &result.id))
+        .collect();
+
+    results.retain(|result| {
+        result.section == RECENT_SECTION
+            || !recent_keys
+                .iter()
+                .any(|key| *key == result_usage_key(result.provider, &result.id))
+    });
+}
+
+fn section_rank(section: &str) -> u8 {
+    match section {
+        "Recent" => 0,
+        "Favorites" => 1,
+        "Apps" => 10,
+        "Commands" => 20,
+        "Web" => 30,
+        _ => 100,
+    }
 }
 
 fn global_result_cmp(a: &SearchResult, b: &SearchResult) -> Ordering {
@@ -351,6 +399,76 @@ mod tests {
         assert_eq!(results[0].id, "ghostty.desktop");
         assert_eq!(results[1].id, "dolphin.desktop");
         assert_eq!(results[2].id, "hamlet");
+    }
+
+    #[test]
+    fn sort_results_uses_explicit_section_order() {
+        let mut command = result("commands", "hamlet", 3.0);
+        command.kind = ResultKind::Command;
+        command.section = "Commands".to_string();
+        command.title = "Hamlet".to_string();
+
+        let mut app = result("apps", "ghostty.desktop", 1.0);
+        app.title = "Ghostty".to_string();
+
+        let mut results = vec![command, app];
+
+        sort_results(&mut results);
+
+        assert_eq!(results[0].section, "Apps");
+        assert_eq!(results[1].section, "Commands");
+    }
+
+    #[test]
+    fn recent_results_uses_last_used_order_and_recent_section() {
+        let mut store = UsageStore::default();
+        store.records.insert(
+            result_usage_key("apps", "old.desktop"),
+            UsageRecord {
+                provider: "apps".to_string(),
+                id: "old.desktop".to_string(),
+                activation_count: 10,
+                last_used_at_unix: 1,
+            },
+        );
+        store.records.insert(
+            result_usage_key("apps", "new.desktop"),
+            UsageRecord {
+                provider: "apps".to_string(),
+                id: "new.desktop".to_string(),
+                activation_count: 1,
+                last_used_at_unix: 2,
+            },
+        );
+
+        let results = vec![
+            result("apps", "old.desktop", 1.0),
+            result("apps", "new.desktop", 1.0),
+        ];
+
+        let recent = store.recent_results(&results, 1);
+
+        assert_eq!(recent.len(), 1);
+        assert_eq!(recent[0].id, "new.desktop");
+        assert_eq!(recent[0].section, "Recent");
+    }
+
+    #[test]
+    fn remove_recent_duplicates_removes_matching_base_results() {
+        let mut recent = result("apps", "ghostty.desktop", 1.0);
+        recent.section = "Recent".to_string();
+
+        let mut results = vec![
+            recent,
+            result("apps", "ghostty.desktop", 1.0),
+            result("apps", "kitty.desktop", 1.0),
+        ];
+
+        remove_recent_duplicates(&mut results);
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].section, "Recent");
+        assert_eq!(results[1].id, "kitty.desktop");
     }
 
     #[test]

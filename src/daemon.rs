@@ -32,9 +32,12 @@ use crate::{
     providers,
     usage::{
         UsageStore,
+        remove_recent_duplicates,
         sort_results,
     },
 };
+
+const RECENT_RESULT_LIMIT: usize = 5;
 
 pub struct DaemonState {
     config: Config,
@@ -141,6 +144,10 @@ impl DaemonState {
         }
 
         self.usage.boost_results(&mut results);
+        if query.trim().is_empty() {
+            results.extend(self.usage.recent_results(&results, RECENT_RESULT_LIMIT));
+            remove_recent_duplicates(&mut results);
+        }
         sort_results(&mut results);
 
         ServerResponse::Results {

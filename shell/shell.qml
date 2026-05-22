@@ -17,6 +17,7 @@ PanelWindow {
   property string query: ""
   property var results: []
   property var iconWarmResults: []
+  property var pendingActions: ({})
   property int requestId: 0
   property bool primingInitialResults: false
   property string ipcError: ""
@@ -112,6 +113,7 @@ PanelWindow {
     selectedActionIndex = 0;
     query = "";
     results = [];
+    pendingActions = ({});
     ipcError = "";
     footerStatus = "";
     panel.resetInput();
@@ -222,6 +224,10 @@ PanelWindow {
     }
 
     ipc.activate(result.provider, result.id, action.id);
+    pendingActions[`${result.provider}:${result.id}:${action.id}`] = {
+      "close_behavior": action.close_behavior || "confirmed",
+      "label": action.label || action.id
+    };
 
     if (action.close_behavior === "immediate") {
       closeLauncher();
@@ -329,6 +335,17 @@ PanelWindow {
     }
 
     onActivated: (provider, id, action) => {
+      const key = `${provider}:${id}:${action}`;
+      const pendingAction = launcher.pendingActions[key] || {};
+      delete launcher.pendingActions[key];
+
+      if (pendingAction.close_behavior === "keep_open") {
+        launcher.footerStatus = pendingAction.label;
+        footerStatusTimer.restart();
+        launcher.exitActionMode();
+        return;
+      }
+
       launcher.closeLauncher();
     }
 

@@ -7,7 +7,7 @@ pub trait Provider: Send {
     fn refresh(&mut self) -> anyhow::Result<()>;
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct SearchResult {
     pub id: String,
     pub provider: &'static str,
@@ -53,6 +53,12 @@ impl SearchAction {
         self.close_behavior = SearchActionCloseBehavior::Immediate;
         self
     }
+
+    #[allow(dead_code)]
+    pub fn keep_open(mut self) -> Self {
+        self.close_behavior = SearchActionCloseBehavior::KeepOpen;
+        self
+    }
 }
 
 #[derive(Clone, Copy, Serialize)]
@@ -60,4 +66,6 @@ impl SearchAction {
 pub enum SearchActionCloseBehavior {
     Confirmed,
     Immediate,
+    #[allow(dead_code)]
+    KeepOpen,
 }
