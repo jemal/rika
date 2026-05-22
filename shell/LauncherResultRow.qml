@@ -10,14 +10,13 @@ Rectangle {
   required property int rowIndex
   required property var result
   required property var launcher
-  required property bool showSectionHeader
-  readonly property bool showSubtitle: result.subtitle.length > 0 && result.subtitle !== result.title
+  readonly property bool showSubtitle: launcher.resultHasSubtitle(result)
   readonly property string iconSource: launcher.resolveIconSource(result.icon)
   readonly property bool tintedIcon: result.icon.startsWith("builtin:")
   readonly property bool selected: rowIndex === launcher.selectedIndex
 
   width: ListView.view.width
-  height: showSectionHeader ? 54 : 34
+  height: 44
   radius: 5
   color: "transparent"
   clip: true
@@ -25,8 +24,8 @@ Rectangle {
   Rectangle {
     anchors.left: parent.left
     anchors.right: parent.right
+    anchors.top: parent.top
     anchors.bottom: parent.bottom
-    height: 34
     radius: 5
     color: root.selected ? root.launcher.hoverColor : "transparent"
 
@@ -41,7 +40,7 @@ Rectangle {
   Rectangle {
     anchors.left: parent.left
     anchors.leftMargin: 2
-    y: (root.showSectionHeader ? 20 : 0) + Math.round((34 - height) / 2)
+    y: Math.round((root.height - height) / 2)
     width: 2
     height: root.selected ? 18 : 0
     radius: 1
@@ -66,8 +65,8 @@ Rectangle {
   RowLayout {
     anchors.left: parent.left
     anchors.right: parent.right
+    anchors.top: parent.top
     anchors.bottom: parent.bottom
-    height: 34
     anchors.leftMargin: 10
     anchors.rightMargin: 8
     spacing: 8
@@ -132,7 +131,7 @@ Rectangle {
     ColumnLayout {
       Layout.fillWidth: true
       Layout.alignment: Qt.AlignVCenter
-      spacing: 0
+      spacing: root.showSubtitle ? 1 : 0
 
       Text {
         Layout.fillWidth: true
@@ -156,24 +155,6 @@ Rectangle {
         visible: root.showSubtitle
       }
     }
-  }
-
-  Text {
-    anchors.left: parent.left
-    anchors.right: parent.right
-    anchors.top: parent.top
-    anchors.leftMargin: 10
-    anchors.rightMargin: 8
-    height: 20
-    text: root.result.section
-    color: Qt.alpha(root.launcher.mutedTextColor, 0.72)
-    font.family: root.launcher.fontFamily
-    font.pixelSize: root.launcher.tinyFontSize
-    font.weight: Font.Medium
-    verticalAlignment: Text.AlignVCenter
-    elide: Text.ElideRight
-    maximumLineCount: 1
-    visible: root.showSectionHeader
   }
 
   MouseArea {

@@ -337,6 +337,7 @@ fn section_rank(section: &str) -> u8 {
     match section {
         "Favorites" => 0,
         "Recent" => 1,
+        "Projects" => 5,
         "Apps" => 10,
         "Commands" => 20,
         "Web" => 30,
@@ -537,15 +538,21 @@ mod tests {
         command.section = "Commands".to_string();
         command.title = "Hamlet".to_string();
 
+        let mut project = result("projects", "/tmp/rika", 2.0);
+        project.kind = ResultKind::Project;
+        project.section = "Projects".to_string();
+        project.title = "rika".to_string();
+
         let mut app = result("apps", "ghostty.desktop", 1.0);
         app.title = "Ghostty".to_string();
 
-        let mut results = vec![command, app];
+        let mut results = vec![command, app, project];
 
         sort_results(&mut results);
 
-        assert_eq!(results[0].section, "Apps");
-        assert_eq!(results[1].section, "Commands");
+        assert_eq!(results[0].section, "Projects");
+        assert_eq!(results[1].section, "Apps");
+        assert_eq!(results[2].section, "Commands");
     }
 
     #[test]

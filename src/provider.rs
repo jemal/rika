@@ -28,6 +28,7 @@ pub struct SearchResult {
 pub enum ResultKind {
     App,
     Command,
+    Project,
     Web,
 }
 
@@ -68,7 +69,7 @@ impl SearchAction {
     }
 }
 
-#[derive(Clone, Copy, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SearchActionCloseBehavior {
     Confirmed,

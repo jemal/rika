@@ -18,6 +18,12 @@ enabled = true
 enabled = true
 cmds = []
 
+[providers.projects]
+enabled = true
+roots = ["~/dev/projects"]
+kitty_command = "kitty"
+kitty_remote = "auto"
+
 [providers.web_search]
 enabled = true
 browser_command = ""

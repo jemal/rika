@@ -4,12 +4,14 @@ use crate::{
     providers::{
         apps::AppsProvider,
         commands::CommandsProvider,
+        projects::ProjectsProvider,
         web_search::WebSearchProvider,
     },
 };
 
 pub mod apps;
 pub mod commands;
+pub mod projects;
 pub mod web_search;
 
 struct ProviderSpec {
@@ -36,6 +38,12 @@ const PROVIDERS: &[ProviderSpec] = &[
         id: "commands",
         enabled: |config| config.providers.commands.enabled,
         build: |config| Box::new(CommandsProvider::new(&config.providers.commands)),
+        reload: ReloadMode::Rebuild,
+    },
+    ProviderSpec {
+        id: "projects",
+        enabled: |config| config.providers.projects.enabled,
+        build: |config| Box::new(ProjectsProvider::new(&config.providers.projects)),
         reload: ReloadMode::Rebuild,
     },
     ProviderSpec {

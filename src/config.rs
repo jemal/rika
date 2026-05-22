@@ -9,6 +9,7 @@ use serde::{
 use crate::providers::{
     apps::AppsProviderConfig,
     commands::CommandsProviderConfig,
+    projects::ProjectsProviderConfig,
     web_search::WebSearchProviderConfig,
 };
 
@@ -76,6 +77,7 @@ pub enum LauncherWindowAnchor {
 pub struct Providers {
     pub apps: AppsProviderConfig,
     pub commands: CommandsProviderConfig,
+    pub projects: ProjectsProviderConfig,
     pub web_search: WebSearchProviderConfig,
 }
 
@@ -108,5 +110,21 @@ impl Config {
         };
 
         Ok(config)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn packaged_config_deserializes() {
+        let config = toml::from_str::<Config>(include_str!("../resources/config.toml"))
+            .expect("packaged config should deserialize");
+
+        assert!(config.providers.projects.enabled);
+        assert_eq!(config.providers.projects.roots, vec!["~/dev/projects"]);
+        assert_eq!(config.providers.projects.kitty_command, "kitty");
+        assert_eq!(config.providers.projects.kitty_remote, "auto");
     }
 }

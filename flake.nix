@@ -47,7 +47,9 @@
             src = lib.cleanSource ./.;
             filter =
               path: type:
-              (craneLib.filterCargoSources path type) || lib.hasSuffix "/resources/bangs.json" (toString path);
+              (craneLib.filterCargoSources path type)
+              || lib.hasSuffix "/resources/bangs.json" (toString path)
+              || lib.hasSuffix "/resources/config.toml" (toString path);
           };
 
           cargoArtifacts = craneLib.buildDepsOnly {

@@ -18,40 +18,24 @@ Rectangle {
     input.text = "";
   }
 
-  function revealSelectedResult() {
-    const item = results.itemAtIndex(launcher.selectedIndex);
-    if (!item) {
-      return false;
-    }
-
-    const top = item.y;
-    const bottom = item.y + item.height;
-    const visibleTop = results.contentY;
-    const visibleBottom = results.contentY + results.height;
-    const maxContentY = Math.max(0, results.contentHeight - results.height);
-
-    if (top < visibleTop) {
-      results.contentY = Math.max(0, Math.min(maxContentY, top));
-    } else if (bottom > visibleBottom) {
-      results.contentY = Math.max(0, Math.min(maxContentY, bottom - results.height));
-    }
-
-    return true;
+  function resetResultScroll() {
+    results.positionViewAtBeginning();
   }
 
   function positionSelectedResult(positionMode) {
-    const mode = positionMode === undefined ? ListView.Contain : positionMode;
-
-    if (!revealSelectedResult()) {
-      results.positionViewAtIndex(launcher.selectedIndex, mode);
+    const count = launcher.filteredResults().length;
+    if (launcher.selectedIndex < 0 || launcher.selectedIndex >= count) {
+      return;
     }
 
-    Qt.callLater(() => {
-      if (!revealSelectedResult()) {
-        results.positionViewAtIndex(launcher.selectedIndex, mode);
-        Qt.callLater(revealSelectedResult);
-      }
-    });
+    const displayIndex = launcher.displayIndexForResult(launcher.selectedIndex);
+    if (displayIndex < 0) {
+      return;
+    }
+
+    const mode = positionMode === undefined ? ListView.Contain : positionMode;
+    const scrollIndex = mode === ListView.End ? displayIndex : launcher.scrollIndexForResult(launcher.selectedIndex);
+    results.positionViewAtIndex(scrollIndex, mode);
   }
 
   function applyAutocomplete() {
@@ -265,7 +249,9 @@ Rectangle {
       clip: true
       spacing: 0
       boundsBehavior: Flickable.StopAtBounds
-      model: root.launcher.filteredResults()
+      currentIndex: root.launcher.displayIndexForResult(root.launcher.selectedIndex)
+      highlightMoveDuration: 0
+      model: root.launcher.displayRows()
       add: Transition {
         NumberAnimation {
           properties: "opacity"
@@ -293,15 +279,36 @@ Rectangle {
 
       onCountChanged: root.launcher.clampSelection()
 
-      delegate: LauncherResultRow {
+      delegate: Loader {
+        id: resultDelegate
+
         required property int index
         required property var modelData
 
         width: ListView.view.width
-        rowIndex: index
-        result: modelData
-        showSectionHeader: root.launcher.shouldShowSectionHeader(index)
-        launcher: root.launcher
+        height: modelData.type === "section" ? 22 : 44
+        sourceComponent: modelData.type === "section" ? sectionComponent : resultComponent
+
+        Component {
+          id: sectionComponent
+
+          LauncherSectionHeader {
+            width: resultDelegate.width
+            text: resultDelegate.modelData.section
+            launcher: root.launcher
+          }
+        }
+
+        Component {
+          id: resultComponent
+
+          LauncherResultRow {
+            width: resultDelegate.width
+            rowIndex: resultDelegate.modelData.resultIndex
+            result: resultDelegate.modelData.result
+            launcher: root.launcher
+          }
+        }
       }
 
       Column {

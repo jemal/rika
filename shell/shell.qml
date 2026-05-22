@@ -120,11 +120,61 @@ PanelWindow {
   }
 
   function toggleLauncher() {
-    open = !open;
+    if (open) {
+      closeLauncher();
+    } else {
+      openLauncher();
+    }
   }
 
   function filteredResults() {
     return results;
+  }
+
+  function displayRows() {
+    const results = filteredResults();
+    const rows = [];
+
+    for (let i = 0; i < results.length; i += 1) {
+      if (shouldShowSectionHeader(i)) {
+        rows.push({
+          "type": "section",
+          "section": results[i].section,
+          "resultIndex": -1
+        });
+      }
+
+      rows.push({
+        "type": "result",
+        "result": results[i],
+        "resultIndex": i
+      });
+    }
+
+    return rows;
+  }
+
+  function displayIndexForResult(resultIndex) {
+    const rows = displayRows();
+
+    for (let i = 0; i < rows.length; i += 1) {
+      if (rows[i].type === "result" && rows[i].resultIndex === resultIndex) {
+        return i;
+      }
+    }
+
+    return -1;
+  }
+
+  function scrollIndexForResult(resultIndex) {
+    const displayIndex = displayIndexForResult(resultIndex);
+    const rows = displayRows();
+
+    if (displayIndex > 0 && rows[displayIndex - 1].type === "section") {
+      return displayIndex - 1;
+    }
+
+    return displayIndex;
   }
 
   function selectedResult() {
@@ -150,6 +200,10 @@ PanelWindow {
 
     const previous = results[index - 1];
     return !previous || previous.section !== result.section;
+  }
+
+  function resultHasSubtitle(result) {
+    return result && result.subtitle && result.subtitle.length > 0 && result.subtitle !== result.title;
   }
 
   function hasMultipleSections() {
@@ -341,7 +395,14 @@ PanelWindow {
   LauncherClient {
     id: ipc
 
-    socketPath: `${Quickshell.env("XDG_RUNTIME_DIR")}/rika-launcher.sock`
+    socketPath: {
+      const socketPath = Quickshell.env("RIKA_LAUNCHER_SOCKET");
+      if (socketPath && socketPath.length > 0) {
+        return socketPath;
+      }
+
+      return `${Quickshell.env("XDG_RUNTIME_DIR")}/rika-launcher.sock`;
+    }
 
     onResultsReceived: (responseRequestId, items) => {
       launcher.iconWarmResults = items;
@@ -354,6 +415,7 @@ PanelWindow {
       launcher.selectedIndex = 0;
       launcher.actionMode = false;
       launcher.selectedActionIndex = 0;
+      panel.resetResultScroll();
       launcher.primingInitialResults = false;
       launcher.ipcError = "";
     }
