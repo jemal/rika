@@ -1,6 +1,9 @@
 use std::{
     cmp::Ordering,
-    collections::HashMap,
+    collections::{
+        HashMap,
+        HashSet,
+    },
     fs,
     path::{
         Path,
@@ -21,7 +24,10 @@ use serde::{
 use crate::provider::SearchResult;
 
 const USAGE_BOOST_SCALE: f32 = 0.15;
+const FAVORITES_SECTION: &str = "Favorites";
 const RECENT_SECTION: &str = "Recent";
+pub const ADD_FAVORITE_ACTION: &str = "favorite_add";
+pub const REMOVE_FAVORITE_ACTION: &str = "favorite_remove";
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct UsageKey {
@@ -39,13 +45,23 @@ struct UsageRecord {
 
 #[derive(Default, Deserialize, Serialize)]
 struct UsageState {
+    #[serde(default)]
     entries: Vec<UsageRecord>,
+    #[serde(default)]
+    favorites: Vec<FavoriteRecord>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+struct FavoriteRecord {
+    provider: String,
+    id: String,
 }
 
 #[derive(Default)]
 pub struct UsageStore {
     path: Option<PathBuf>,
     records: HashMap<UsageKey, UsageRecord>,
+    favorites: HashSet<UsageKey>,
 }
 
 impl UsageStore {
@@ -65,6 +81,7 @@ impl UsageStore {
                 return Self {
                     path: Some(path),
                     records: HashMap::new(),
+                    favorites: HashSet::new(),
                 };
             }
             Err(err) => {
@@ -72,6 +89,7 @@ impl UsageStore {
                 return Self {
                     path: Some(path),
                     records: HashMap::new(),
+                    favorites: HashSet::new(),
                 };
             }
         };
@@ -83,6 +101,7 @@ impl UsageStore {
                 return Self {
                     path: Some(path),
                     records: HashMap::new(),
+                    favorites: HashSet::new(),
                 };
             }
         };
@@ -100,6 +119,14 @@ impl UsageStore {
                         },
                         record,
                     )
+                })
+                .collect(),
+            favorites: state
+                .favorites
+                .into_iter()
+                .map(|favorite| UsageKey {
+                    provider: favorite.provider,
+                    id: favorite.id,
                 })
                 .collect(),
         }
@@ -163,6 +190,60 @@ impl UsageStore {
             .collect()
     }
 
+    pub fn favorite_results(&self, results: &[SearchResult]) -> Vec<SearchResult> {
+        let result_by_key: HashMap<UsageKey, &SearchResult> = results
+            .iter()
+            .map(|result| (result_usage_key(result.provider, &result.id), result))
+            .collect();
+        let mut favorites: Vec<&UsageKey> = self.favorites.iter().collect();
+        favorites.sort_by(|a, b| a.provider.cmp(&b.provider).then_with(|| a.id.cmp(&b.id)));
+
+        favorites
+            .into_iter()
+            .filter_map(|key| {
+                result_by_key.get(key).map(|result| {
+                    let mut favorite = (*result).clone();
+                    favorite.section = FAVORITES_SECTION.to_string();
+                    favorite
+                })
+            })
+            .collect()
+    }
+
+    pub fn add_result_actions(&self, results: &mut [SearchResult]) {
+        for result in results {
+            if !can_favorite_result(result) {
+                continue;
+            }
+
+            let key = result_usage_key(result.provider, &result.id);
+            if self.favorites.contains(&key) {
+                result.actions.push(
+                    crate::provider::SearchAction::new(
+                        REMOVE_FAVORITE_ACTION,
+                        "Remove from Favorites",
+                        "",
+                    )
+                    .keep_open(),
+                );
+            } else {
+                result.actions.push(
+                    crate::provider::SearchAction::new(ADD_FAVORITE_ACTION, "Add to Favorites", "")
+                        .keep_open(),
+                );
+            }
+        }
+    }
+
+    pub fn handle_favorite_action(&mut self, provider: &str, id: &str, action: &str) -> bool {
+        let key = result_usage_key(provider, id);
+        match action {
+            ADD_FAVORITE_ACTION => self.favorites.insert(key),
+            REMOVE_FAVORITE_ACTION => self.favorites.remove(&key),
+            _ => false,
+        }
+    }
+
     pub fn save(&self) -> anyhow::Result<()> {
         let Some(path) = &self.path else {
             return Ok(());
@@ -175,7 +256,17 @@ impl UsageStore {
         let mut entries: Vec<UsageRecord> = self.records.values().cloned().collect();
         entries.sort_by(|a, b| a.provider.cmp(&b.provider).then_with(|| a.id.cmp(&b.id)));
 
-        let content = serde_json::to_string_pretty(&UsageState { entries })
+        let mut favorites: Vec<FavoriteRecord> = self
+            .favorites
+            .iter()
+            .map(|favorite| FavoriteRecord {
+                provider: favorite.provider.clone(),
+                id: favorite.id.clone(),
+            })
+            .collect();
+        favorites.sort_by(|a, b| a.provider.cmp(&b.provider).then_with(|| a.id.cmp(&b.id)));
+
+        let content = serde_json::to_string_pretty(&UsageState { entries, favorites })
             .context("while attempting to serialize usage state")?;
         let tmp_path = path.with_extension("json.tmp");
         fs::write(&tmp_path, content).context("while attempting to write temporary usage state")?;
@@ -193,7 +284,12 @@ pub fn sort_results(results: &mut [SearchResult]) {
     });
 }
 
-pub fn remove_recent_duplicates(results: &mut Vec<SearchResult>) {
+pub fn remove_synthetic_duplicates(results: &mut Vec<SearchResult>) {
+    let favorite_keys: Vec<UsageKey> = results
+        .iter()
+        .filter(|result| result.section == FAVORITES_SECTION)
+        .map(|result| result_usage_key(result.provider, &result.id))
+        .collect();
     let recent_keys: Vec<UsageKey> = results
         .iter()
         .filter(|result| result.section == RECENT_SECTION)
@@ -201,22 +297,37 @@ pub fn remove_recent_duplicates(results: &mut Vec<SearchResult>) {
         .collect();
 
     results.retain(|result| {
-        result.section == RECENT_SECTION
-            || !recent_keys
+        let key = result_usage_key(result.provider, &result.id);
+        if result.section == FAVORITES_SECTION {
+            return true;
+        }
+
+        if result.section == RECENT_SECTION {
+            return !favorite_keys
                 .iter()
-                .any(|key| *key == result_usage_key(result.provider, &result.id))
+                .any(|favorite_key| *favorite_key == key);
+        }
+
+        !favorite_keys
+            .iter()
+            .any(|favorite_key| *favorite_key == key)
+            && !recent_keys.iter().any(|recent_key| *recent_key == key)
     });
 }
 
 fn section_rank(section: &str) -> u8 {
     match section {
-        "Recent" => 0,
-        "Favorites" => 1,
+        "Favorites" => 0,
+        "Recent" => 1,
         "Apps" => 10,
         "Commands" => 20,
         "Web" => 30,
         _ => 100,
     }
+}
+
+fn can_favorite_result(result: &SearchResult) -> bool {
+    result.default_action != "noop" && !(result.provider == "web_search" && result.id.contains(':'))
 }
 
 fn global_result_cmp(a: &SearchResult, b: &SearchResult) -> Ordering {
@@ -454,7 +565,7 @@ mod tests {
     }
 
     #[test]
-    fn remove_recent_duplicates_removes_matching_base_results() {
+    fn remove_synthetic_duplicates_removes_matching_base_results() {
         let mut recent = result("apps", "ghostty.desktop", 1.0);
         recent.section = "Recent".to_string();
 
@@ -464,11 +575,89 @@ mod tests {
             result("apps", "kitty.desktop", 1.0),
         ];
 
-        remove_recent_duplicates(&mut results);
+        remove_synthetic_duplicates(&mut results);
 
         assert_eq!(results.len(), 2);
         assert_eq!(results[0].section, "Recent");
         assert_eq!(results[1].id, "kitty.desktop");
+    }
+
+    #[test]
+    fn remove_synthetic_duplicates_prefers_favorites_over_recent() {
+        let mut favorite = result("apps", "ghostty.desktop", 1.0);
+        favorite.section = "Favorites".to_string();
+        let mut recent = result("apps", "ghostty.desktop", 1.0);
+        recent.section = "Recent".to_string();
+
+        let mut results = vec![favorite, recent, result("apps", "ghostty.desktop", 1.0)];
+
+        remove_synthetic_duplicates(&mut results);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].section, "Favorites");
+    }
+
+    #[test]
+    fn favorite_results_use_favorites_section() {
+        let mut store = UsageStore::default();
+        assert!(store.handle_favorite_action("apps", "ghostty.desktop", ADD_FAVORITE_ACTION));
+
+        let results = vec![
+            result("apps", "ghostty.desktop", 1.0),
+            result("apps", "kitty.desktop", 1.0),
+        ];
+
+        let favorites = store.favorite_results(&results);
+
+        assert_eq!(favorites.len(), 1);
+        assert_eq!(favorites[0].id, "ghostty.desktop");
+        assert_eq!(favorites[0].section, "Favorites");
+    }
+
+    #[test]
+    fn add_result_actions_reflects_favorite_state() {
+        let mut store = UsageStore::default();
+        assert!(store.handle_favorite_action("apps", "ghostty.desktop", ADD_FAVORITE_ACTION));
+
+        let mut results = vec![
+            result("apps", "ghostty.desktop", 1.0),
+            result("apps", "kitty.desktop", 1.0),
+        ];
+
+        store.add_result_actions(&mut results);
+
+        assert!(
+            results[0]
+                .actions
+                .iter()
+                .any(|action| action.id == REMOVE_FAVORITE_ACTION)
+        );
+        assert!(
+            results[1]
+                .actions
+                .iter()
+                .any(|action| action.id == ADD_FAVORITE_ACTION)
+        );
+    }
+
+    #[test]
+    fn save_and_load_round_trips_favorites() {
+        let path = temp_state_path("favorites-round-trip");
+        let mut store = UsageStore::load_from_path(path.clone());
+        assert!(store.handle_favorite_action("apps", "ghostty.desktop", ADD_FAVORITE_ACTION));
+        store.save().expect("usage state should save");
+
+        let loaded = UsageStore::load_from_path(path.clone());
+
+        assert!(
+            loaded
+                .favorites
+                .contains(&result_usage_key("apps", "ghostty.desktop"))
+        );
+
+        if let Some(parent) = path.parent() {
+            let _ = fs::remove_dir_all(parent);
+        }
     }
 
     #[test]

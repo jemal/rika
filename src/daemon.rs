@@ -31,8 +31,10 @@ use crate::{
     provider::Provider,
     providers,
     usage::{
+        ADD_FAVORITE_ACTION,
+        REMOVE_FAVORITE_ACTION,
         UsageStore,
-        remove_recent_duplicates,
+        remove_synthetic_duplicates,
         sort_results,
     },
 };
@@ -145,9 +147,11 @@ impl DaemonState {
 
         self.usage.boost_results(&mut results);
         if query.trim().is_empty() {
+            results.extend(self.usage.favorite_results(&results));
             results.extend(self.usage.recent_results(&results, RECENT_RESULT_LIMIT));
-            remove_recent_duplicates(&mut results);
+            remove_synthetic_duplicates(&mut results);
         }
+        self.usage.add_result_actions(&mut results);
         sort_results(&mut results);
 
         ServerResponse::Results {
@@ -157,6 +161,21 @@ impl DaemonState {
     }
 
     fn handle_activate(&mut self, provider: String, id: String, action: String) -> ServerResponse {
+        if action == ADD_FAVORITE_ACTION || action == REMOVE_FAVORITE_ACTION {
+            let changed = self.usage.handle_favorite_action(&provider, &id, &action);
+            if changed {
+                if let Err(err) = self.usage.save() {
+                    eprintln!("failed to save usage state: {err}");
+                }
+            }
+
+            return ServerResponse::Activated {
+                provider,
+                id,
+                action,
+            };
+        }
+
         let Some(provider_impl) = self.providers.iter().find(|p| p.id() == provider) else {
             return ServerResponse::Error {
                 message: format!("provider not found: {provider}"),

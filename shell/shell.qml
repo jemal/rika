@@ -140,12 +140,36 @@ PanelWindow {
       return false;
     }
 
+    if (query.trim().length > 0 && !hasMultipleSections()) {
+      return false;
+    }
+
     if (index === 0) {
       return true;
     }
 
     const previous = results[index - 1];
     return !previous || previous.section !== result.section;
+  }
+
+  function hasMultipleSections() {
+    const results = filteredResults();
+    let firstSection = "";
+
+    for (let i = 0; i < results.length; i += 1) {
+      const section = results[i].section || "";
+      if (section.length === 0) {
+        continue;
+      }
+
+      if (firstSection.length === 0) {
+        firstSection = section;
+      } else if (section !== firstSection) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   function selectedActions() {
@@ -343,6 +367,7 @@ PanelWindow {
         launcher.footerStatus = pendingAction.label;
         footerStatusTimer.restart();
         launcher.exitActionMode();
+        launcher.sendQuery(launcher.query);
         return;
       }
 
