@@ -250,7 +250,7 @@ PanelWindow {
     ipc.activate(result.provider, result.id, action.id);
     pendingActions[`${result.provider}:${result.id}:${action.id}`] = {
       "close_behavior": action.close_behavior || "confirmed",
-      "label": action.label || action.id
+      "success_message": action.success_message || action.label || action.id
     };
 
     if (action.close_behavior === "immediate") {
@@ -364,7 +364,7 @@ PanelWindow {
       delete launcher.pendingActions[key];
 
       if (pendingAction.close_behavior === "keep_open") {
-        launcher.footerStatus = pendingAction.label;
+        launcher.footerStatus = pendingAction.success_message;
         footerStatusTimer.restart();
         launcher.exitActionMode();
         launcher.sendQuery(launcher.query);

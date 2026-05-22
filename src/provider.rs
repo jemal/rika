@@ -37,6 +37,8 @@ pub struct SearchAction {
     pub label: String,
     pub icon: String,
     pub close_behavior: SearchActionCloseBehavior,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub success_message: String,
 }
 
 impl SearchAction {
@@ -46,6 +48,7 @@ impl SearchAction {
             label: label.into(),
             icon: icon.into(),
             close_behavior: SearchActionCloseBehavior::Confirmed,
+            success_message: String::new(),
         }
     }
 
@@ -54,9 +57,13 @@ impl SearchAction {
         self
     }
 
-    #[allow(dead_code)]
     pub fn keep_open(mut self) -> Self {
         self.close_behavior = SearchActionCloseBehavior::KeepOpen;
+        self
+    }
+
+    pub fn success_message(mut self, message: impl Into<String>) -> Self {
+        self.success_message = message.into();
         self
     }
 }
@@ -66,6 +73,5 @@ impl SearchAction {
 pub enum SearchActionCloseBehavior {
     Confirmed,
     Immediate,
-    #[allow(dead_code)]
     KeepOpen,
 }

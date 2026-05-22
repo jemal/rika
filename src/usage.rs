@@ -1,9 +1,6 @@
 use std::{
     cmp::Ordering,
-    collections::{
-        HashMap,
-        HashSet,
-    },
+    collections::HashMap,
     fs,
     path::{
         Path,
@@ -55,13 +52,15 @@ struct UsageState {
 struct FavoriteRecord {
     provider: String,
     id: String,
+    #[serde(default)]
+    favorited_at_unix: u64,
 }
 
 #[derive(Default)]
 pub struct UsageStore {
     path: Option<PathBuf>,
     records: HashMap<UsageKey, UsageRecord>,
-    favorites: HashSet<UsageKey>,
+    favorites: HashMap<UsageKey, FavoriteRecord>,
 }
 
 impl UsageStore {
@@ -81,7 +80,7 @@ impl UsageStore {
                 return Self {
                     path: Some(path),
                     records: HashMap::new(),
-                    favorites: HashSet::new(),
+                    favorites: HashMap::new(),
                 };
             }
             Err(err) => {
@@ -89,7 +88,7 @@ impl UsageStore {
                 return Self {
                     path: Some(path),
                     records: HashMap::new(),
-                    favorites: HashSet::new(),
+                    favorites: HashMap::new(),
                 };
             }
         };
@@ -101,7 +100,7 @@ impl UsageStore {
                 return Self {
                     path: Some(path),
                     records: HashMap::new(),
-                    favorites: HashSet::new(),
+                    favorites: HashMap::new(),
                 };
             }
         };
@@ -124,9 +123,14 @@ impl UsageStore {
             favorites: state
                 .favorites
                 .into_iter()
-                .map(|favorite| UsageKey {
-                    provider: favorite.provider,
-                    id: favorite.id,
+                .map(|favorite| {
+                    (
+                        UsageKey {
+                            provider: favorite.provider.clone(),
+                            id: favorite.id.clone(),
+                        },
+                        favorite,
+                    )
                 })
                 .collect(),
         }
@@ -195,12 +199,17 @@ impl UsageStore {
             .iter()
             .map(|result| (result_usage_key(result.provider, &result.id), result))
             .collect();
-        let mut favorites: Vec<&UsageKey> = self.favorites.iter().collect();
-        favorites.sort_by(|a, b| a.provider.cmp(&b.provider).then_with(|| a.id.cmp(&b.id)));
+        let mut favorites: Vec<(&UsageKey, &FavoriteRecord)> = self.favorites.iter().collect();
+        favorites.sort_by(|(a_key, a), (b_key, b)| {
+            b.favorited_at_unix
+                .cmp(&a.favorited_at_unix)
+                .then_with(|| a_key.provider.cmp(&b_key.provider))
+                .then_with(|| a_key.id.cmp(&b_key.id))
+        });
 
         favorites
             .into_iter()
-            .filter_map(|key| {
+            .filter_map(|(key, _)| {
                 result_by_key.get(key).map(|result| {
                     let mut favorite = (*result).clone();
                     favorite.section = FAVORITES_SECTION.to_string();
@@ -217,19 +226,21 @@ impl UsageStore {
             }
 
             let key = result_usage_key(result.provider, &result.id);
-            if self.favorites.contains(&key) {
+            if self.favorites.contains_key(&key) {
                 result.actions.push(
                     crate::provider::SearchAction::new(
                         REMOVE_FAVORITE_ACTION,
                         "Remove from Favorites",
                         "",
                     )
-                    .keep_open(),
+                    .keep_open()
+                    .success_message("Removed from Favorites"),
                 );
             } else {
                 result.actions.push(
                     crate::provider::SearchAction::new(ADD_FAVORITE_ACTION, "Add to Favorites", "")
-                        .keep_open(),
+                        .keep_open()
+                        .success_message("Added to Favorites"),
                 );
             }
         }
@@ -238,8 +249,22 @@ impl UsageStore {
     pub fn handle_favorite_action(&mut self, provider: &str, id: &str, action: &str) -> bool {
         let key = result_usage_key(provider, id);
         match action {
-            ADD_FAVORITE_ACTION => self.favorites.insert(key),
-            REMOVE_FAVORITE_ACTION => self.favorites.remove(&key),
+            ADD_FAVORITE_ACTION => {
+                if self.favorites.contains_key(&key) {
+                    false
+                } else {
+                    self.favorites.insert(
+                        key,
+                        FavoriteRecord {
+                            provider: provider.to_string(),
+                            id: id.to_string(),
+                            favorited_at_unix: current_unix_timestamp(),
+                        },
+                    );
+                    true
+                }
+            }
+            REMOVE_FAVORITE_ACTION => self.favorites.remove(&key).is_some(),
             _ => false,
         }
     }
@@ -256,14 +281,7 @@ impl UsageStore {
         let mut entries: Vec<UsageRecord> = self.records.values().cloned().collect();
         entries.sort_by(|a, b| a.provider.cmp(&b.provider).then_with(|| a.id.cmp(&b.id)));
 
-        let mut favorites: Vec<FavoriteRecord> = self
-            .favorites
-            .iter()
-            .map(|favorite| FavoriteRecord {
-                provider: favorite.provider.clone(),
-                id: favorite.id.clone(),
-            })
-            .collect();
+        let mut favorites: Vec<FavoriteRecord> = self.favorites.values().cloned().collect();
         favorites.sort_by(|a, b| a.provider.cmp(&b.provider).then_with(|| a.id.cmp(&b.id)));
 
         let content = serde_json::to_string_pretty(&UsageState { entries, favorites })
@@ -630,14 +648,45 @@ mod tests {
             results[0]
                 .actions
                 .iter()
-                .any(|action| action.id == REMOVE_FAVORITE_ACTION)
+                .any(|action| action.id == REMOVE_FAVORITE_ACTION
+                    && action.success_message == "Removed from Favorites")
         );
         assert!(
             results[1]
                 .actions
                 .iter()
-                .any(|action| action.id == ADD_FAVORITE_ACTION)
+                .any(|action| action.id == ADD_FAVORITE_ACTION
+                    && action.success_message == "Added to Favorites")
         );
+    }
+
+    #[test]
+    fn favorite_results_use_newest_first_order() {
+        let mut store = UsageStore::default();
+        store.favorites.insert(
+            result_usage_key("apps", "old.desktop"),
+            FavoriteRecord {
+                provider: "apps".to_string(),
+                id: "old.desktop".to_string(),
+                favorited_at_unix: 1,
+            },
+        );
+        store.favorites.insert(
+            result_usage_key("apps", "new.desktop"),
+            FavoriteRecord {
+                provider: "apps".to_string(),
+                id: "new.desktop".to_string(),
+                favorited_at_unix: 2,
+            },
+        );
+
+        let favorites = store.favorite_results(&[
+            result("apps", "old.desktop", 1.0),
+            result("apps", "new.desktop", 1.0),
+        ]);
+
+        assert_eq!(favorites[0].id, "new.desktop");
+        assert_eq!(favorites[1].id, "old.desktop");
     }
 
     #[test]
@@ -652,8 +701,32 @@ mod tests {
         assert!(
             loaded
                 .favorites
-                .contains(&result_usage_key("apps", "ghostty.desktop"))
+                .contains_key(&result_usage_key("apps", "ghostty.desktop"))
         );
+
+        if let Some(parent) = path.parent() {
+            let _ = fs::remove_dir_all(parent);
+        }
+    }
+
+    #[test]
+    fn load_defaults_legacy_favorite_timestamps() {
+        let path = temp_state_path("legacy-favorite");
+        fs::create_dir_all(path.parent().expect("state file should have parent"))
+            .expect("temp dir should be created");
+        fs::write(
+            &path,
+            r#"{"entries":[],"favorites":[{"provider":"apps","id":"ghostty.desktop"}]}"#,
+        )
+        .expect("legacy state should be written");
+
+        let loaded = UsageStore::load_from_path(path.clone());
+        let favorite = loaded
+            .favorites
+            .get(&result_usage_key("apps", "ghostty.desktop"))
+            .expect("legacy favorite should load");
+
+        assert_eq!(favorite.favorited_at_unix, 0);
 
         if let Some(parent) = path.parent() {
             let _ = fs::remove_dir_all(parent);
