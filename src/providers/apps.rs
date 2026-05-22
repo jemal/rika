@@ -19,11 +19,14 @@ use serde::{
     Serialize,
 };
 
-use crate::provider::{
-    Provider,
-    ResultKind,
-    SearchAction,
-    SearchResult,
+use crate::{
+    clipboard,
+    provider::{
+        Provider,
+        ResultKind,
+        SearchAction,
+        SearchResult,
+    },
 };
 
 #[derive(Debug)]
@@ -135,7 +138,11 @@ impl Provider for AppsProvider {
                         .to_string(),
                     score,
                     default_action: "open".to_string(),
-                    actions: vec![SearchAction::new("open", "Open", "")],
+                    actions: vec![
+                        SearchAction::new("open", "Open", ""),
+                        SearchAction::new("copy_id", "Copy Desktop ID", "").immediate(),
+                        SearchAction::new("copy_name", "Copy Name", "").immediate(),
+                    ],
                     autocomplete: None,
                 });
             }
@@ -200,6 +207,20 @@ impl Provider for AppsProvider {
                 });
 
                 Ok(())
+            }
+            "copy_id" => {
+                let Some(app) = self.apps.iter().find(|app| app.file_name == id) else {
+                    bail!("desktop app not found: {id}");
+                };
+
+                clipboard::copy_text(&app.file_name)
+            }
+            "copy_name" => {
+                let Some(app) = self.apps.iter().find(|app| app.file_name == id) else {
+                    bail!("desktop app not found: {id}");
+                };
+
+                clipboard::copy_text(&app.name)
             }
             _ => bail!("unsupported desktop action: {action}"),
         }

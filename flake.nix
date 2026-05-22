@@ -47,8 +47,7 @@
             src = lib.cleanSource ./.;
             filter =
               path: type:
-              (craneLib.filterCargoSources path type)
-              || lib.hasSuffix "/resources/bangs.json" (toString path);
+              (craneLib.filterCargoSources path type) || lib.hasSuffix "/resources/bangs.json" (toString path);
           };
 
           cargoArtifacts = craneLib.buildDepsOnly {
@@ -93,7 +92,12 @@
                 --set-default NIXPKGS_QT6_QML_IMPORT_PATH "${qmlImportPath}" \
                 --set-default QML_IMPORT_PATH "${qmlImportPath}" \
                 --set-default QML2_IMPORT_PATH "${qmlImportPath}" \
-                --prefix PATH : ${lib.makeBinPath [ rika ]}
+                --prefix PATH : ${
+                  lib.makeBinPath [
+                    rika
+                    pkgs.wl-clipboard
+                  ]
+                }
 
               runHook postInstall
             '';
@@ -140,6 +144,7 @@
             pkgs.desktop-file-utils
             pkgs.jq
             pkgs.socat
+            pkgs.wl-clipboard
             pkgs.xdg-utils
           ];
 

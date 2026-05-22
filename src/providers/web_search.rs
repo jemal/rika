@@ -13,11 +13,14 @@ use serde::{
     Serialize,
 };
 
-use crate::provider::{
-    Provider,
-    ResultKind,
-    SearchAction,
-    SearchResult,
+use crate::{
+    clipboard,
+    provider::{
+        Provider,
+        ResultKind,
+        SearchAction,
+        SearchResult,
+    },
 };
 
 include!(concat!(env!("OUT_DIR"), "/builtin_bangs.rs"));
@@ -40,6 +43,12 @@ struct Bang {
     name: String,
     alias: String,
     url: String,
+}
+
+impl Bang {
+    fn construct_url(&self, query: &str) -> String {
+        self.url.replace("{{{s}}}", query)
+    }
 }
 
 #[derive(Deserialize)]
@@ -168,7 +177,10 @@ impl Provider for WebSearchProvider {
                             format!("{alias}:{search_query}"),
                             format!("Search {} - {search_query}", bang.name),
                             "search".to_string(),
-                            vec![SearchAction::new("search", "Search", "builtin:globe")],
+                            vec![
+                                SearchAction::new("search", "Search", "builtin:globe"),
+                                SearchAction::new("copy_url", "Copy URL", "").immediate(),
+                            ],
                         )
                     };
 
@@ -203,7 +215,7 @@ impl Provider for WebSearchProvider {
                     bail!("unknown bang: {alias}");
                 };
 
-                let constructed_url = bang.url.replace("{{{s}}}", query);
+                let constructed_url = bang.construct_url(query);
 
                 let mut parts = self.browser_command.split_whitespace();
                 let Some(cmd) = parts.next() else {
@@ -223,6 +235,17 @@ impl Provider for WebSearchProvider {
                 });
 
                 Ok(())
+            }
+            "copy_url" => {
+                let Some((alias, query)) = id.split_once(':') else {
+                    bail!("invalid web_search id: {id}");
+                };
+
+                let Some(bang) = self.bangs.iter().find(|bang| bang.alias == alias) else {
+                    bail!("unknown bang: {alias}");
+                };
+
+                clipboard::copy_text(&bang.construct_url(query))
             }
             "noop" => Ok(()),
             _ => bail!("unsupported web_search action: {action}"),
@@ -274,6 +297,12 @@ mod tests {
                 .actions
                 .iter()
                 .any(|action| action.id == "search")
+        );
+        assert!(
+            results[0]
+                .actions
+                .iter()
+                .any(|action| action.id == "copy_url")
         );
     }
 

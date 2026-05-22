@@ -36,6 +36,7 @@ pub struct SearchAction {
     pub id: String,
     pub label: String,
     pub icon: String,
+    pub close_behavior: SearchActionCloseBehavior,
 }
 
 impl SearchAction {
@@ -44,6 +45,19 @@ impl SearchAction {
             id: id.into(),
             label: label.into(),
             icon: icon.into(),
+            close_behavior: SearchActionCloseBehavior::Confirmed,
         }
     }
+
+    pub fn immediate(mut self) -> Self {
+        self.close_behavior = SearchActionCloseBehavior::Immediate;
+        self
+    }
+}
+
+#[derive(Clone, Copy, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SearchActionCloseBehavior {
+    Confirmed,
+    Immediate,
 }

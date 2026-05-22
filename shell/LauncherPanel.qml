@@ -205,6 +205,16 @@ Rectangle {
             } else if (event.key === Qt.Key_Up) {
               root.launcher.selectPreviousAction();
               event.accepted = true;
+            } else if (event.key === Qt.Key_Backtab) {
+              root.launcher.selectPreviousAction();
+              event.accepted = true;
+            } else if (event.key === Qt.Key_Tab) {
+              if (event.modifiers & Qt.ShiftModifier) {
+                root.launcher.selectPreviousAction();
+              } else {
+                root.launcher.selectNextAction();
+              }
+              event.accepted = true;
             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
               root.launcher.activateSelectedAction();
               event.accepted = true;

@@ -12,11 +12,14 @@ use serde::{
     Serialize,
 };
 
-use crate::provider::{
-    Provider,
-    ResultKind,
-    SearchAction,
-    SearchResult,
+use crate::{
+    clipboard,
+    provider::{
+        Provider,
+        ResultKind,
+        SearchAction,
+        SearchResult,
+    },
 };
 
 pub struct CommandsProvider {
@@ -76,7 +79,10 @@ impl Provider for CommandsProvider {
                     icon: "builtin:terminal".to_string(),
                     score: 1.0,
                     default_action: "run".to_string(),
-                    actions: vec![SearchAction::new("run", "Run", "builtin:terminal")],
+                    actions: vec![
+                        SearchAction::new("run", "Run", "builtin:terminal"),
+                        SearchAction::new("copy_command", "Copy Command", "").immediate(),
+                    ],
                     autocomplete: None,
                 });
             }
@@ -105,6 +111,13 @@ impl Provider for CommandsProvider {
                 });
 
                 Ok(())
+            }
+            "copy_command" => {
+                let Some(command) = self.commands.iter().find(|cmd| cmd.name == id) else {
+                    bail!("command not found: {id}");
+                };
+
+                clipboard::copy_text(&command.command)
             }
             _ => bail!("unsupported command action: {action}"),
         }
@@ -139,6 +152,12 @@ mod tests {
                 .actions
                 .iter()
                 .any(|action| action.id == results[0].default_action)
+        );
+        assert!(
+            results[0]
+                .actions
+                .iter()
+                .any(|action| action.id == "copy_command")
         );
     }
 }

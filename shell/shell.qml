@@ -211,17 +211,21 @@ PanelWindow {
     selectedActionIndex = selectedActionIndex === 0 ? count - 1 : selectedActionIndex - 1;
   }
 
-  function activateResultAction(result, actionId) {
-    if (!result || !actionId || actionId.length === 0) {
+  function activateResultAction(result, action) {
+    if (!result || !action || !action.id || action.id.length === 0) {
       return;
     }
 
-    if (actionId === "noop") {
+    if (action.id === "noop") {
       closeLauncher();
       return;
     }
 
-    ipc.activate(result.provider, result.id, actionId);
+    ipc.activate(result.provider, result.id, action.id);
+
+    if (action.close_behavior === "immediate") {
+      closeLauncher();
+    }
   }
 
   function activateSelectedAction() {
@@ -231,7 +235,7 @@ PanelWindow {
       return;
     }
 
-    activateResultAction(selectedResult(), action.id);
+    activateResultAction(selectedResult(), action);
   }
 
   function activateSelection() {
@@ -246,7 +250,12 @@ PanelWindow {
       return;
     }
 
-    activateResultAction(result, result.default_action);
+    const actions = result.actions || [];
+    const defaultAction = actions.find(action => action.id === result.default_action);
+    activateResultAction(result, defaultAction || {
+      "id": result.default_action,
+      "close_behavior": "confirmed"
+    });
   }
 
   visible: shown

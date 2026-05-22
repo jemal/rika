@@ -1,4 +1,5 @@
 use std::{
+    cmp::Ordering,
     collections::HashMap,
     fs,
     path::{
@@ -153,13 +154,29 @@ impl UsageStore {
 }
 
 pub fn sort_results(results: &mut [SearchResult]) {
+    results.sort_by(global_result_cmp);
+
+    let mut section_order = HashMap::new();
+    for result in results.iter() {
+        let next_index = section_order.len();
+        section_order
+            .entry(result.section.clone())
+            .or_insert(next_index);
+    }
+
     results.sort_by(|a, b| {
-        b.score
-            .total_cmp(&a.score)
-            .then_with(|| a.provider.cmp(b.provider))
-            .then_with(|| a.title.cmp(&b.title))
-            .then_with(|| a.id.cmp(&b.id))
+        section_order[&a.section]
+            .cmp(&section_order[&b.section])
+            .then_with(|| global_result_cmp(a, b))
     });
+}
+
+fn global_result_cmp(a: &SearchResult, b: &SearchResult) -> Ordering {
+    b.score
+        .total_cmp(&a.score)
+        .then_with(|| a.provider.cmp(b.provider))
+        .then_with(|| a.title.cmp(&b.title))
+        .then_with(|| a.id.cmp(&b.id))
 }
 
 fn state_file_path() -> Option<PathBuf> {
@@ -312,6 +329,28 @@ mod tests {
         assert_eq!(results[0].id, "a.desktop");
         assert_eq!(results[1].id, "z.desktop");
         assert_eq!(results[2].id, "!gh");
+    }
+
+    #[test]
+    fn sort_results_keeps_sections_contiguous() {
+        let mut app_high = result("apps", "ghostty.desktop", 2.0);
+        app_high.title = "Ghostty".to_string();
+
+        let mut command = result("commands", "hamlet", 1.5);
+        command.kind = ResultKind::Command;
+        command.section = "Commands".to_string();
+        command.title = "Hamlet".to_string();
+
+        let mut app_low = result("apps", "dolphin.desktop", 1.0);
+        app_low.title = "Dolphin".to_string();
+
+        let mut results = vec![app_low, command, app_high];
+
+        sort_results(&mut results);
+
+        assert_eq!(results[0].id, "ghostty.desktop");
+        assert_eq!(results[1].id, "dolphin.desktop");
+        assert_eq!(results[2].id, "hamlet");
     }
 
     #[test]
