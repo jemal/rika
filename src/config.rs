@@ -9,6 +9,7 @@ use serde::{
 use crate::providers::{
     apps::AppsProviderConfig,
     commands::CommandsProviderConfig,
+    files::FilesProviderConfig,
     projects::ProjectsProviderConfig,
     web_search::WebSearchProviderConfig,
 };
@@ -77,6 +78,7 @@ pub enum LauncherWindowAnchor {
 pub struct Providers {
     pub apps: AppsProviderConfig,
     pub commands: CommandsProviderConfig,
+    pub files: FilesProviderConfig,
     pub projects: ProjectsProviderConfig,
     pub web_search: WebSearchProviderConfig,
 }
@@ -123,6 +125,8 @@ mod tests {
             .expect("packaged config should deserialize");
 
         assert!(config.providers.projects.enabled);
+        assert!(config.providers.files.enabled);
+        assert_eq!(config.providers.files.open_command, "xdg-open");
         assert_eq!(config.providers.projects.roots, vec!["~/dev/projects"]);
         assert_eq!(config.providers.projects.kitty_command, "kitty");
         assert_eq!(config.providers.projects.kitty_remote, "auto");

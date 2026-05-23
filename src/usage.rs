@@ -337,6 +337,7 @@ fn section_rank(section: &str) -> u8 {
     match section {
         "Favorites" => 0,
         "Recent" => 1,
+        "Files" => 4,
         "Projects" => 5,
         "Apps" => 10,
         "Commands" => 20,
@@ -346,7 +347,9 @@ fn section_rank(section: &str) -> u8 {
 }
 
 fn can_favorite_result(result: &SearchResult) -> bool {
-    result.default_action != "noop" && !(result.provider == "web_search" && result.id.contains(':'))
+    result.default_action != "noop"
+        && result.provider != "files"
+        && !(result.provider == "web_search" && result.id.contains(':'))
 }
 
 fn global_result_cmp(a: &SearchResult, b: &SearchResult) -> Ordering {
@@ -538,6 +541,11 @@ mod tests {
         command.section = "Commands".to_string();
         command.title = "Hamlet".to_string();
 
+        let mut file = result("files", "/tmp/notes.md", 2.5);
+        file.kind = ResultKind::File;
+        file.section = "Files".to_string();
+        file.title = "notes.md".to_string();
+
         let mut project = result("projects", "/tmp/rika", 2.0);
         project.kind = ResultKind::Project;
         project.section = "Projects".to_string();
@@ -546,13 +554,14 @@ mod tests {
         let mut app = result("apps", "ghostty.desktop", 1.0);
         app.title = "Ghostty".to_string();
 
-        let mut results = vec![command, app, project];
+        let mut results = vec![command, app, project, file];
 
         sort_results(&mut results);
 
-        assert_eq!(results[0].section, "Projects");
-        assert_eq!(results[1].section, "Apps");
-        assert_eq!(results[2].section, "Commands");
+        assert_eq!(results[0].section, "Files");
+        assert_eq!(results[1].section, "Projects");
+        assert_eq!(results[2].section, "Apps");
+        assert_eq!(results[3].section, "Commands");
     }
 
     #[test]
@@ -664,6 +673,25 @@ mod tests {
                 .iter()
                 .any(|action| action.id == ADD_FAVORITE_ACTION
                     && action.success_message == "Added to Favorites")
+        );
+    }
+
+    #[test]
+    fn add_result_actions_skips_direct_file_results() {
+        let store = UsageStore::default();
+        let mut file = result("files", "/tmp/notes.md", 1.0);
+        file.kind = ResultKind::File;
+
+        let mut results = vec![file];
+
+        store.add_result_actions(&mut results);
+
+        assert!(
+            !results[0]
+                .actions
+                .iter()
+                .any(|action| action.id == ADD_FAVORITE_ACTION
+                    || action.id == REMOVE_FAVORITE_ACTION)
         );
     }
 

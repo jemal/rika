@@ -18,6 +18,11 @@ enabled = true
 enabled = true
 cmds = []
 
+[providers.files]
+enabled = true
+editor_command = ""
+open_command = "xdg-open"
+
 [providers.projects]
 enabled = true
 roots = ["~/dev/projects"]

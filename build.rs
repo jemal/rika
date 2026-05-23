@@ -24,12 +24,8 @@ fn main() {
         if t.is_empty() || u.is_empty() {
             continue;
         }
-        writeln!(
-            f,
-            "    ({s:?}, {:?}, {u:?}),",
-            format!("!{t}"),
-        )
-        .expect("write bang");
+        let trigger = format!("!{t}");
+        writeln!(f, "    ({s:?}, {trigger:?}, {u:?}),").expect("write bang");
     }
     writeln!(f, "];").expect("write footer");
 }

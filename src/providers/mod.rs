@@ -4,6 +4,7 @@ use crate::{
     providers::{
         apps::AppsProvider,
         commands::CommandsProvider,
+        files::FilesProvider,
         projects::ProjectsProvider,
         web_search::WebSearchProvider,
     },
@@ -11,6 +12,7 @@ use crate::{
 
 pub mod apps;
 pub mod commands;
+pub mod files;
 pub mod projects;
 pub mod web_search;
 
@@ -38,6 +40,12 @@ const PROVIDERS: &[ProviderSpec] = &[
         id: "commands",
         enabled: |config| config.providers.commands.enabled,
         build: |config| Box::new(CommandsProvider::new(&config.providers.commands)),
+        reload: ReloadMode::Rebuild,
+    },
+    ProviderSpec {
+        id: "files",
+        enabled: |config| config.providers.files.enabled,
+        build: |config| Box::new(FilesProvider::new(&config.providers.files)),
         reload: ReloadMode::Rebuild,
     },
     ProviderSpec {

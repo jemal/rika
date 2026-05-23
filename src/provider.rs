@@ -28,6 +28,8 @@ pub struct SearchResult {
 pub enum ResultKind {
     App,
     Command,
+    Directory,
+    File,
     Project,
     Web,
 }
