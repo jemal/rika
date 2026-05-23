@@ -85,15 +85,17 @@ impl Provider for ProjectsProvider {
     }
 
     fn search(&self, query: &str) -> Vec<SearchResult> {
-        let query = query.to_lowercase();
+        let query = query.trim().to_lowercase();
+        if query.is_empty() {
+            return vec![];
+        }
+
         let mut results = vec![];
 
         for project in &self.projects {
             let title = project.title.to_lowercase();
             let path = project.path.to_string_lossy().to_lowercase();
-            let score = if query.is_empty() {
-                1.0
-            } else if title.contains(&query) {
+            let score = if title.contains(&query) {
                 1.0
             } else if path.contains(&query) {
                 0.5
@@ -459,7 +461,7 @@ mod tests {
         let empty_results = provider.search("");
         let typed_results = provider.search("cod");
 
-        assert_eq!(empty_results.len(), 2);
+        assert!(empty_results.is_empty());
         assert_eq!(typed_results.len(), 1);
         assert_eq!(typed_results[0].title, "codex");
         assert_eq!(typed_results[0].kind, ResultKind::Project);

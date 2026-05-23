@@ -236,6 +236,26 @@ PanelWindow {
     return selectedActionIndex >= 0 && selectedActionIndex < actions.length ? actions[selectedActionIndex] : null;
   }
 
+  function selectedDefaultAction() {
+    const result = selectedResult();
+    if (!result) {
+      return null;
+    }
+
+    const actions = result.actions || [];
+    return actions.find(action => action.id === result.default_action) || null;
+  }
+
+  function primaryActionLabel() {
+    if (actionMode) {
+      const action = selectedAction();
+      return action ? action.label : "Run";
+    }
+
+    const action = selectedDefaultAction();
+    return action ? action.label : "Open";
+  }
+
   function clampSelection() {
     const count = filteredResults().length;
     selectedIndex = count === 0 ? 0 : Math.max(0, Math.min(selectedIndex, count - 1));

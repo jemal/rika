@@ -79,6 +79,73 @@ Rectangle {
     applyAutocomplete();
   }
 
+  function selectNextSection() {
+    const results = launcher.filteredResults();
+    const count = results.length;
+
+    if (count === 0) {
+      return;
+    }
+
+    const currentIndex = Math.max(0, Math.min(launcher.selectedIndex, count - 1));
+    const currentSection = results[currentIndex].section || "";
+
+    for (let i = currentIndex + 1; i < count; i += 1) {
+      if ((results[i].section || "") !== currentSection) {
+        launcher.selectedIndex = i;
+        positionSelectedResult(ListView.Contain);
+        applyAutocomplete();
+        return;
+      }
+    }
+
+    launcher.selectedIndex = 0;
+    positionSelectedResult(ListView.Beginning);
+    applyAutocomplete();
+  }
+
+  function selectPreviousSection() {
+    const results = launcher.filteredResults();
+    const count = results.length;
+
+    if (count === 0) {
+      return;
+    }
+
+    const currentIndex = Math.max(0, Math.min(launcher.selectedIndex, count - 1));
+    const currentSection = results[currentIndex].section || "";
+    let sectionStart = currentIndex;
+
+    while (sectionStart > 0 && (results[sectionStart - 1].section || "") === currentSection) {
+      sectionStart -= 1;
+    }
+
+    if (sectionStart > 0) {
+      const previousSection = results[sectionStart - 1].section || "";
+      let previousSectionStart = sectionStart - 1;
+
+      while (previousSectionStart > 0 && (results[previousSectionStart - 1].section || "") === previousSection) {
+        previousSectionStart -= 1;
+      }
+
+      launcher.selectedIndex = previousSectionStart;
+      positionSelectedResult(ListView.Contain);
+      applyAutocomplete();
+      return;
+    }
+
+    const lastSection = results[count - 1].section || "";
+    let lastSectionStart = count - 1;
+
+    while (lastSectionStart > 0 && (results[lastSectionStart - 1].section || "") === lastSection) {
+      lastSectionStart -= 1;
+    }
+
+    launcher.selectedIndex = lastSectionStart;
+    positionSelectedResult(ListView.End);
+    applyAutocomplete();
+  }
+
   function handleAltNavigation(event) {
     if (!(event.modifiers & Qt.AltModifier)) {
       return false;
@@ -183,10 +250,10 @@ Rectangle {
             if (event.key === Qt.Key_Escape || event.key === Qt.Key_Left || event.key === Qt.Key_Backspace) {
               root.launcher.exitActionMode();
               event.accepted = true;
-            } else if (event.key === Qt.Key_Down) {
+            } else if (event.key === Qt.Key_Down || (event.key === Qt.Key_J && event.modifiers & Qt.ControlModifier)) {
               root.launcher.selectNextAction();
               event.accepted = true;
-            } else if (event.key === Qt.Key_Up) {
+            } else if (event.key === Qt.Key_Up || (event.key === Qt.Key_K && event.modifiers & Qt.ControlModifier)) {
               root.launcher.selectPreviousAction();
               event.accepted = true;
             } else if (event.key === Qt.Key_Backtab) {
@@ -215,6 +282,12 @@ Rectangle {
             event.accepted = true;
           } else if (event.key === Qt.Key_R && event.modifiers & Qt.ControlModifier) {
             root.launcher.refreshProviders();
+            event.accepted = true;
+          } else if (event.key === Qt.Key_Down && event.modifiers & Qt.ControlModifier && count > 0) {
+            root.selectNextSection();
+            event.accepted = true;
+          } else if (event.key === Qt.Key_Up && event.modifiers & Qt.ControlModifier && count > 0) {
+            root.selectPreviousSection();
             event.accepted = true;
           } else if (event.key === Qt.Key_Down && count > 0) {
             root.selectNextResult();
@@ -462,7 +535,7 @@ Rectangle {
       }
 
       Text {
-        text: root.launcher.actionMode ? "Run" : "Open"
+        text: root.launcher.primaryActionLabel()
         color: root.launcher.textColor
         font.family: root.launcher.fontFamily
         font.pixelSize: root.launcher.smallFontSize
