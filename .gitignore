@@ -20,7 +20,7 @@
 !resources/**/
 !resources/bangs.json
 !resources/**/*.svg
-!resources/**/*.toml
+!resources/**/*.json
 
 !shell/
 !shell/**/

@@ -92,7 +92,7 @@ impl Config {
         };
 
         config_path.push("rika");
-        config_path.push("config.toml");
+        config_path.push("config.json");
 
         let config_str = match std::fs::read_to_string(&config_path) {
             Ok(config_str) => config_str,
@@ -105,7 +105,7 @@ impl Config {
             ),
         };
 
-        let config = match toml::from_str::<Config>(&config_str) {
+        let config = match serde_json::from_str::<Config>(&config_str) {
             Ok(config) => config,
             Err(err) => bail!(
                 "failed to parse config file at {}: {err}",
@@ -123,7 +123,7 @@ mod tests {
 
     #[test]
     fn packaged_config_deserializes() {
-        let config = toml::from_str::<Config>(include_str!("../resources/config.toml"))
+        let config = serde_json::from_str::<Config>(include_str!("../resources/config.json"))
             .expect("packaged config should deserialize");
 
         assert!(config.providers.projects.enabled);
@@ -140,11 +140,16 @@ mod tests {
 
     #[test]
     fn unknown_provider_fields_are_rejected() {
-        let err = toml::from_str::<Config>(
+        let err = serde_json::from_str::<Config>(
             r#"
-[providers.file_search]
-enabled = false
-unknown = true
+{
+  "providers": {
+    "file_search": {
+      "enabled": false,
+      "unknown": true
+    }
+  }
+}
 "#,
         )
         .err()

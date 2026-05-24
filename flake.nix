@@ -49,7 +49,7 @@
               path: type:
               (craneLib.filterCargoSources path type)
               || lib.hasSuffix "/resources/bangs.json" (toString path)
-              || lib.hasSuffix "/resources/config.toml" (toString path);
+              || lib.hasSuffix "/resources/config.json" (toString path);
           };
 
           cargoArtifacts = craneLib.buildDepsOnly {

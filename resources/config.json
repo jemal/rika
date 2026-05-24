@@ -1,0 +1,47 @@
+{
+  "launcher": {
+    "max_visible_results": 7,
+    "font_family": "",
+    "font_size": 14,
+    "small_font_size": 13,
+    "tiny_font_size": 10,
+    "window": {
+      "anchor": "top",
+      "width": 580,
+      "height": 316,
+      "margin": 320
+    }
+  },
+  "providers": {
+    "apps": {
+      "enabled": true
+    },
+    "commands": {
+      "enabled": true,
+      "cmds": []
+    },
+    "files": {
+      "enabled": true,
+      "editor_command": "",
+      "open_command": "xdg-open"
+    },
+    "file_search": {
+      "enabled": false,
+      "roots": [],
+      "min_query_len": 3,
+      "max_results": 50
+    },
+    "projects": {
+      "enabled": true,
+      "roots": [
+        "~/dev/projects"
+      ],
+      "kitty_command": "kitty",
+      "kitty_remote": "auto"
+    },
+    "web_search": {
+      "enabled": true,
+      "browser_command": ""
+    }
+  }
+}
