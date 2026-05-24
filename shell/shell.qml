@@ -190,10 +190,6 @@ PanelWindow {
       return false;
     }
 
-    if (query.trim().length > 0 && !hasMultipleSections()) {
-      return false;
-    }
-
     if (index === 0) {
       return true;
     }
@@ -204,26 +200,6 @@ PanelWindow {
 
   function resultHasSubtitle(result) {
     return result && result.subtitle && result.subtitle.length > 0 && result.subtitle !== result.title;
-  }
-
-  function hasMultipleSections() {
-    const results = filteredResults();
-    let firstSection = "";
-
-    for (let i = 0; i < results.length; i += 1) {
-      const section = results[i].section || "";
-      if (section.length === 0) {
-        continue;
-      }
-
-      if (firstSection.length === 0) {
-        firstSection = section;
-      } else if (section !== firstSection) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
   function selectedActions() {

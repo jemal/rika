@@ -337,9 +337,9 @@ fn section_rank(section: &str) -> u8 {
     match section {
         "Favorites" => 0,
         "Recent" => 1,
-        "Files" => 4,
+        "Apps" => 4,
         "Projects" => 5,
-        "Apps" => 10,
+        "Files" => 10,
         "Commands" => 20,
         "Web" => 30,
         _ => 100,
@@ -559,9 +559,9 @@ mod tests {
 
         sort_results(&mut results);
 
-        assert_eq!(results[0].section, "Files");
+        assert_eq!(results[0].section, "Apps");
         assert_eq!(results[1].section, "Projects");
-        assert_eq!(results[2].section, "Apps");
+        assert_eq!(results[2].section, "Files");
         assert_eq!(results[3].section, "Commands");
     }
 
