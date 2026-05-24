@@ -349,6 +349,7 @@ fn section_rank(section: &str) -> u8 {
 fn can_favorite_result(result: &SearchResult) -> bool {
     result.default_action != "noop"
         && result.provider != "files"
+        && result.provider != "file_search"
         && !(result.provider == "web_search" && result.id.contains(':'))
 }
 
@@ -680,6 +681,25 @@ mod tests {
     fn add_result_actions_skips_direct_file_results() {
         let store = UsageStore::default();
         let mut file = result("files", "/tmp/notes.md", 1.0);
+        file.kind = ResultKind::File;
+
+        let mut results = vec![file];
+
+        store.add_result_actions(&mut results);
+
+        assert!(
+            !results[0]
+                .actions
+                .iter()
+                .any(|action| action.id == ADD_FAVORITE_ACTION
+                    || action.id == REMOVE_FAVORITE_ACTION)
+        );
+    }
+
+    #[test]
+    fn add_result_actions_skips_indexed_file_results() {
+        let store = UsageStore::default();
+        let mut file = result("file_search", "/tmp/notes.md", 1.0);
         file.kind = ResultKind::File;
 
         let mut results = vec![file];

@@ -23,6 +23,12 @@ enabled = true
 editor_command = ""
 open_command = "xdg-open"
 
+[providers.file_search]
+enabled = false
+roots = []
+min_query_len = 3
+max_results = 50
+
 [providers.projects]
 enabled = true
 roots = ["~/dev/projects"]

@@ -1,6 +1,5 @@
 use std::{
     ffi::OsStr,
-    fs,
     path::{
         Path,
         PathBuf,
@@ -92,26 +91,7 @@ impl Provider for FilesProvider {
     }
 
     fn activate(&self, id: &str, action: &str) -> anyhow::Result<()> {
-        let path = Path::new(id);
-        match action {
-            "open" => {
-                if path.is_file() && is_text_file(path) && !self.editor_command.is_empty() {
-                    spawn_configured_command(&self.editor_command, path)
-                } else {
-                    spawn_configured_command(&self.open_command, path)
-                }
-            }
-            "open_default" => spawn_configured_command(&self.open_command, path),
-            "open_editor" => {
-                if self.editor_command.is_empty() {
-                    bail!("editor_command is empty");
-                }
-
-                spawn_configured_command(&self.editor_command, path)
-            }
-            "copy_path" => clipboard::copy_text(id),
-            _ => bail!("unsupported file action: {action}"),
-        }
+        activate_file(id, action, &self.editor_command, &self.open_command)
     }
 
     fn refresh(&mut self) -> anyhow::Result<()> {
@@ -119,21 +99,61 @@ impl Provider for FilesProvider {
     }
 }
 
-fn file_result(
+pub(crate) fn activate_file(
+    id: &str,
+    action: &str,
+    editor_command: &str,
+    open_command: &str,
+) -> anyhow::Result<()> {
+    let path = Path::new(id);
+    match action {
+        "open" => {
+            if path.is_file() && is_text_file(path) && !editor_command.is_empty() {
+                spawn_configured_command(editor_command, path)
+            } else {
+                spawn_configured_command(open_command, path)
+            }
+        }
+        "open_default" => spawn_configured_command(open_command, path),
+        "open_editor" => {
+            if editor_command.is_empty() {
+                bail!("editor_command is empty");
+            }
+
+            spawn_configured_command(editor_command, path)
+        }
+        "copy_path" => clipboard::copy_text(id),
+        _ => bail!("unsupported file action: {action}"),
+    }
+}
+
+pub(crate) fn file_result(
     provider: &'static str,
     path: &Path,
     is_dir: bool,
     has_editor: bool,
+) -> SearchResult {
+    file_result_with_subtitle(provider, path, is_dir, has_editor, None, 1.0)
+}
+
+pub(crate) fn file_result_with_subtitle(
+    provider: &'static str,
+    path: &Path,
+    is_dir: bool,
+    has_editor: bool,
+    subtitle: Option<String>,
+    score: f32,
 ) -> SearchResult {
     let title = path
         .file_name()
         .and_then(OsStr::to_str)
         .map(str::to_string)
         .unwrap_or_else(|| path.display().to_string());
-    let subtitle = path
-        .parent()
-        .map(|parent| parent.to_string_lossy().to_string())
-        .unwrap_or_default();
+    let subtitle = subtitle.unwrap_or_else(|| {
+        path.parent()
+            .map(|parent| parent.to_string_lossy().to_string())
+            .unwrap_or_default()
+    });
     let is_text = path.is_file() && is_text_file(path);
     let mut actions = vec![
         SearchAction::new("open", "Open", "builtin:folder"),
@@ -161,7 +181,7 @@ fn file_result(
         } else {
             String::new()
         },
-        score: 1.0,
+        score,
         default_action: "open".to_string(),
         actions,
         autocomplete: None,
@@ -185,7 +205,7 @@ fn looks_path_like(query: &str) -> bool {
         || query.starts_with("../")
 }
 
-fn expand_path(path: &str) -> PathBuf {
+pub(crate) fn expand_path(path: &str) -> PathBuf {
     if path == "~" {
         if let Some(home) = dirs::home_dir() {
             return home;
@@ -202,17 +222,7 @@ fn expand_path(path: &str) -> PathBuf {
 }
 
 fn is_text_file(path: &Path) -> bool {
-    if has_text_extension(path) {
-        return true;
-    }
-
-    let Ok(bytes) = fs::read(path) else {
-        return false;
-    };
-    let sample_len = bytes.len().min(8192);
-    let sample = &bytes[..sample_len];
-
-    !sample.contains(&0) && std::str::from_utf8(sample).is_ok()
+    has_text_extension(path)
 }
 
 fn has_text_extension(path: &Path) -> bool {
@@ -371,6 +381,56 @@ mod tests {
                 .iter()
                 .any(|action| action.id == "copy_path"
                     && action.close_behavior == SearchActionCloseBehavior::Immediate)
+        );
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn direct_pdf_file_does_not_get_editor_action() {
+        let root = temp_dir("direct-pdf");
+        fs::create_dir_all(&root).expect("temp directory should be created");
+        let file = root.join("notes.pdf");
+        fs::write(&file, "%PDF").expect("file should be created");
+        let provider = FilesProvider::new(&FilesProviderConfig {
+            enabled: true,
+            editor_command: "nvim".to_string(),
+            open_command: "xdg-open".to_string(),
+        });
+
+        let results = provider.search(&file.to_string_lossy());
+
+        assert_eq!(results.len(), 1);
+        assert!(
+            !results[0]
+                .actions
+                .iter()
+                .any(|action| action.id == "open_editor")
+        );
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn extensionless_text_file_does_not_get_editor_action() {
+        let root = temp_dir("extensionless-text");
+        fs::create_dir_all(&root).expect("temp directory should be created");
+        let file = root.join("notes");
+        fs::write(&file, "hello").expect("file should be created");
+        let provider = FilesProvider::new(&FilesProviderConfig {
+            enabled: true,
+            editor_command: "nvim".to_string(),
+            open_command: "xdg-open".to_string(),
+        });
+
+        let results = provider.search(&file.to_string_lossy());
+
+        assert_eq!(results.len(), 1);
+        assert!(
+            !results[0]
+                .actions
+                .iter()
+                .any(|action| action.id == "open_editor")
         );
 
         let _ = fs::remove_dir_all(root);

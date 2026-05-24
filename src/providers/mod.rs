@@ -4,6 +4,7 @@ use crate::{
     providers::{
         apps::AppsProvider,
         commands::CommandsProvider,
+        file_search::FileSearchProvider,
         files::FilesProvider,
         projects::ProjectsProvider,
         web_search::WebSearchProvider,
@@ -12,6 +13,7 @@ use crate::{
 
 pub mod apps;
 pub mod commands;
+pub mod file_search;
 pub mod files;
 pub mod projects;
 pub mod web_search;
@@ -34,6 +36,19 @@ const PROVIDERS: &[ProviderSpec] = &[
         id: "commands",
         enabled: |config| config.providers.commands.enabled,
         build: |config| Box::new(CommandsProvider::new(&config.providers.commands)),
+        rebuild_on_config_reload: true,
+    },
+    ProviderSpec {
+        id: "file_search",
+        enabled: |config| {
+            config.providers.file_search.enabled && !config.providers.file_search.roots.is_empty()
+        },
+        build: |config| {
+            Box::new(FileSearchProvider::new(
+                &config.providers.file_search,
+                &config.providers.files,
+            ))
+        },
         rebuild_on_config_reload: true,
     },
     ProviderSpec {
@@ -94,4 +109,65 @@ pub fn update(providers: &mut Vec<Box<dyn Provider>>, config: &Config) -> Vec<&'
     }
 
     rebuilt
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::{
+        SystemTime,
+        UNIX_EPOCH,
+    };
+
+    use super::*;
+
+    fn missing_root(test_name: &str) -> String {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("current time should be after unix epoch")
+            .as_nanos();
+        std::env::temp_dir()
+            .join(format!("rika-provider-{test_name}-{nanos}"))
+            .to_string_lossy()
+            .to_string()
+    }
+
+    #[test]
+    fn file_search_disabled_by_default() {
+        let providers = build(&Config::default());
+
+        assert!(
+            !providers
+                .iter()
+                .any(|provider| provider.id() == "file_search")
+        );
+    }
+
+    #[test]
+    fn file_search_empty_roots_do_not_build_provider() {
+        let mut config = Config::default();
+        config.providers.file_search.enabled = true;
+
+        let providers = build(&config);
+
+        assert!(
+            !providers
+                .iter()
+                .any(|provider| provider.id() == "file_search")
+        );
+    }
+
+    #[test]
+    fn file_search_skips_missing_roots_without_failing_construction() {
+        let mut config = Config::default();
+        config.providers.file_search.enabled = true;
+        config.providers.file_search.roots = vec![missing_root("missing")];
+
+        let providers = build(&config);
+        let provider = providers
+            .iter()
+            .find(|provider| provider.id() == "file_search")
+            .expect("file_search provider should be constructed");
+
+        assert!(provider.search("notes").is_empty());
+    }
 }

@@ -9,6 +9,7 @@ use serde::{
 use crate::providers::{
     apps::AppsProviderConfig,
     commands::CommandsProviderConfig,
+    file_search::FileSearchProviderConfig,
     files::FilesProviderConfig,
     projects::ProjectsProviderConfig,
     web_search::WebSearchProviderConfig,
@@ -78,6 +79,7 @@ pub enum LauncherWindowAnchor {
 pub struct Providers {
     pub apps: AppsProviderConfig,
     pub commands: CommandsProviderConfig,
+    pub file_search: FileSearchProviderConfig,
     pub files: FilesProviderConfig,
     pub projects: ProjectsProviderConfig,
     pub web_search: WebSearchProviderConfig,
@@ -126,9 +128,28 @@ mod tests {
 
         assert!(config.providers.projects.enabled);
         assert!(config.providers.files.enabled);
+        assert!(!config.providers.file_search.enabled);
+        assert!(config.providers.file_search.roots.is_empty());
+        assert_eq!(config.providers.file_search.min_query_len, 3);
+        assert_eq!(config.providers.file_search.max_results, 50);
         assert_eq!(config.providers.files.open_command, "xdg-open");
         assert_eq!(config.providers.projects.roots, vec!["~/dev/projects"]);
         assert_eq!(config.providers.projects.kitty_command, "kitty");
         assert_eq!(config.providers.projects.kitty_remote, "auto");
+    }
+
+    #[test]
+    fn unknown_provider_fields_are_rejected() {
+        let err = toml::from_str::<Config>(
+            r#"
+[providers.file_search]
+enabled = false
+unknown = true
+"#,
+        )
+        .err()
+        .expect("unknown provider fields should fail");
+
+        assert!(err.to_string().contains("unknown"));
     }
 }
