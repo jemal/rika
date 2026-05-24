@@ -502,8 +502,8 @@ Rectangle {
           opacity: parent.selected ? 1 : 0.86
 
           Item {
-            Layout.preferredWidth: 26
-            Layout.preferredHeight: 26
+            Layout.preferredWidth: 30
+            Layout.preferredHeight: 30
             Layout.alignment: Qt.AlignVCenter
 
             Loader {
@@ -513,13 +513,13 @@ Rectangle {
               property color resolvedColor: actionRow.selected ? root.launcher.primaryColor : root.launcher.textColor
 
               anchors.centerIn: parent
-              width: 20
-              height: 20
+              width: 24
+              height: 24
               active: actionRow.iconSource.length > 0 && actionRow.tintedIcon
 
               sourceComponent: TintedIcon {
-                width: 20
-                height: 20
+                width: 24
+                height: 24
                 source: actionIconLoader.resolvedSource
                 color: actionIconLoader.resolvedColor
               }

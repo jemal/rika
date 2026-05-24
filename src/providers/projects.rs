@@ -111,7 +111,7 @@ impl Provider for ProjectsProvider {
                     section: "Projects".to_string(),
                     title: project.title.clone(),
                     subtitle: project.parent.clone(),
-                    icon: "builtin:terminal".to_string(),
+                    icon: "builtin:folder-git-2".to_string(),
                     score,
                     default_action: "open_terminal".to_string(),
                     actions: vec![

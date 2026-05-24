@@ -80,14 +80,14 @@ Rectangle {
     }
 
     Item {
-      Layout.preferredWidth: 26
-      Layout.preferredHeight: 26
+      Layout.preferredWidth: 30
+      Layout.preferredHeight: 30
       Layout.alignment: Qt.AlignVCenter
 
       Loader {
         anchors.centerIn: parent
-        width: 20
-        height: 20
+        width: 24
+        height: 24
         active: root.iconSource.length > 0 && !root.tintedIcon
 
         sourceComponent: IconImage {
@@ -103,13 +103,13 @@ Rectangle {
         property color resolvedColor: root.selected ? root.launcher.primaryColor : root.launcher.textColor
 
         anchors.centerIn: parent
-        width: 20
-        height: 20
+        width: 24
+        height: 24
         active: root.iconSource.length > 0 && root.tintedIcon
 
         sourceComponent: TintedIcon {
-          width: 20
-          height: 20
+          width: 24
+          height: 24
           source: tintedIconLoader.resolvedSource
           color: tintedIconLoader.resolvedColor
         }
