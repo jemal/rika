@@ -162,6 +162,24 @@ Rectangle {
       return true;
     }
 
+    if (event.key === Qt.Key_J) {
+      if (root.launcher.actionMode) {
+        root.launcher.selectNextAction();
+      } else {
+        root.selectNextResult();
+      }
+      return true;
+    }
+
+    if (event.key === Qt.Key_K) {
+      if (root.launcher.actionMode) {
+        root.launcher.selectPreviousAction();
+      } else {
+        root.selectPreviousResult();
+      }
+      return true;
+    }
+
     return false;
   }
 
@@ -267,6 +285,14 @@ Rectangle {
                 event.accepted = true;
               } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                 root.launcher.activateSelectedAction();
+                event.accepted = true;
+              } else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_9) {
+                const actionIndex = event.key - Qt.Key_1;
+                const actions = root.launcher.selectedActions();
+                if (actionIndex < actions.length) {
+                  root.launcher.selectedActionIndex = actionIndex;
+                  root.launcher.activateSelectedAction();
+                }
                 event.accepted = true;
               }
 
@@ -464,6 +490,17 @@ Rectangle {
                 font.pixelSize: root.launcher.smallFontSize
                 elide: Text.ElideRight
                 maximumLineCount: 1
+              }
+
+              Text {
+                readonly property int _idx: resultDelegate.modelData.actionIndex
+                Layout.alignment: Qt.AlignVCenter
+                text: _idx < 9 ? String(_idx + 1) : ""
+                color: root.launcher.mutedTextColor
+                font.family: root.launcher.fontFamily
+                font.pixelSize: root.launcher.tinyFontSize
+                opacity: 0.5
+                visible: text.length > 0
               }
             }
 

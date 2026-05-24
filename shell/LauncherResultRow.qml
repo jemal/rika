@@ -44,8 +44,15 @@ Rectangle {
     width: 3
     height: root.selected ? 20 : 0
     radius: 1
-    color: root.launcher.primaryColor
+    color: root.launcher.actionMode && root.selected ? root.launcher.accentColor : root.launcher.primaryColor
     opacity: root.selected ? 1 : 0
+
+    Behavior on color {
+      ColorAnimation {
+        duration: 160
+        easing.type: Easing.OutCubic
+      }
+    }
 
     Behavior on height {
       NumberAnimation {
@@ -155,6 +162,7 @@ Rectangle {
         visible: root.showSubtitle
       }
     }
+
   }
 
   MouseArea {
