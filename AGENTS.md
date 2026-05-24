@@ -9,6 +9,8 @@
 - The Quickshell UI should stay thin: render results, handle focus/selection, and send IPC requests.
 - QML should not parse provider IDs or know provider-specific activation semantics.
 - Result identity is the `(provider, id)` pair. Provider-local IDs should not include a provider prefix.
+- For Design & UI/UX, tend to refer to spotlight/raycast/vicinae. Vicinae source might be available locally at ~/dev/thirdparty/vicinae.
+  - Always breakdown the choices and tradeoffs. Innovation is good too when possible.
 
 ## IPC
 
