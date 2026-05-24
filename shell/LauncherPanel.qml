@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import Quickshell.Widgets
 
 Rectangle {
   id: root
@@ -151,26 +152,6 @@ Rectangle {
       return false;
     }
 
-    const count = launcher.filteredResults().length;
-
-    if (event.key === Qt.Key_J && count > 0) {
-      if (root.launcher.actionMode) {
-        root.launcher.selectNextAction();
-      } else {
-        selectNextResult();
-      }
-      return true;
-    }
-
-    if (event.key === Qt.Key_K && count > 0) {
-      if (root.launcher.actionMode) {
-        root.launcher.selectPreviousAction();
-      } else {
-        selectPreviousResult();
-      }
-      return true;
-    }
-
     if (event.key === Qt.Key_H) {
       input.cursorPosition = Math.max(0, input.cursorPosition - 1);
       return true;
@@ -268,10 +249,10 @@ Rectangle {
               if (event.key === Qt.Key_Escape || event.key === Qt.Key_Left || event.key === Qt.Key_Backspace) {
                 root.launcher.exitActionMode();
                 event.accepted = true;
-              } else if (event.key === Qt.Key_Down || (event.key === Qt.Key_J && event.modifiers & Qt.ControlModifier)) {
+              } else if (event.key === Qt.Key_Down) {
                 root.launcher.selectNextAction();
                 event.accepted = true;
-              } else if (event.key === Qt.Key_Up || (event.key === Qt.Key_K && event.modifiers & Qt.ControlModifier)) {
+              } else if (event.key === Qt.Key_Up) {
                 root.launcher.selectPreviousAction();
                 event.accepted = true;
               } else if (event.key === Qt.Key_Backtab) {
@@ -359,7 +340,7 @@ Rectangle {
       color: root.launcher.outlineColor
     }
 
-    // ── Results ─────────────────────────────────────────────────────
+    // ── Results ──────────────────────────────────────────────────────
     ListView {
       id: results
 
@@ -367,13 +348,13 @@ Rectangle {
       Layout.fillHeight: true
       Layout.topMargin: 4
       Layout.bottomMargin: 4
-      visible: !root.launcher.actionMode
       clip: true
       spacing: 0
       boundsBehavior: Flickable.StopAtBounds
       currentIndex: root.launcher.displayIndexForResult(root.launcher.selectedIndex)
       highlightMoveDuration: 0
       model: root.launcher.displayRows()
+
       add: Transition {
         NumberAnimation {
           properties: "opacity"
@@ -408,8 +389,12 @@ Rectangle {
         required property var modelData
 
         width: ListView.view.width
-        height: modelData.type === "section" ? 26 : 48
-        sourceComponent: modelData.type === "section" ? sectionComponent : resultComponent
+        height: modelData.type === "section" ? 26
+              : modelData.type === "action" ? 36
+              : 48
+        sourceComponent: modelData.type === "section" ? sectionComponent
+                       : modelData.type === "action" ? actionComponent
+                       : resultComponent
 
         Component {
           id: sectionComponent
@@ -429,6 +414,65 @@ Rectangle {
             rowIndex: resultDelegate.modelData.resultIndex
             result: resultDelegate.modelData.result
             launcher: root.launcher
+          }
+        }
+
+        Component {
+          id: actionComponent
+
+          Rectangle {
+            readonly property bool isSelected: resultDelegate.modelData.actionIndex === root.launcher.selectedActionIndex
+
+            width: resultDelegate.width
+            height: 36
+            color: isSelected ? root.launcher.hoverColor : "transparent"
+            radius: 0
+            clip: true
+
+            RowLayout {
+              anchors.fill: parent
+              anchors.leftMargin: 52
+              anchors.rightMargin: 10
+              spacing: 8
+              opacity: isSelected ? 1 : 0.7
+
+              Loader {
+                id: actionInlineIconLoader
+
+                property string resolvedSource: root.launcher.resolveIconSource(resultDelegate.modelData.action.icon || "")
+                property color resolvedColor: isSelected ? root.launcher.primaryColor : root.launcher.mutedTextColor
+
+                Layout.preferredWidth: 16
+                Layout.preferredHeight: 16
+                Layout.alignment: Qt.AlignVCenter
+                active: (resultDelegate.modelData.action.icon || "").length > 0
+
+                sourceComponent: TintedIcon {
+                  width: 16
+                  height: 16
+                  source: actionInlineIconLoader.resolvedSource
+                  color: actionInlineIconLoader.resolvedColor
+                }
+              }
+
+              Text {
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignVCenter
+                text: resultDelegate.modelData.action.label
+                color: isSelected ? root.launcher.textColor : root.launcher.mutedTextColor
+                font.family: root.launcher.fontFamily
+                font.pixelSize: root.launcher.smallFontSize
+                elide: Text.ElideRight
+                maximumLineCount: 1
+              }
+            }
+
+            MouseArea {
+              anchors.fill: parent
+              hoverEnabled: true
+              onEntered: root.launcher.selectedActionIndex = resultDelegate.modelData.actionIndex
+              onClicked: root.launcher.activateSelectedAction()
+            }
           }
         }
       }
@@ -462,102 +506,21 @@ Rectangle {
       }
     }
 
-    // ── Actions ─────────────────────────────────────────────────────
-    ListView {
-      id: actions
+    Connections {
+      target: root.launcher
 
-      Layout.fillWidth: true
-      Layout.fillHeight: true
-      Layout.topMargin: 4
-      Layout.bottomMargin: 4
-      visible: root.launcher.actionMode
-      clip: true
-      spacing: 0
-      boundsBehavior: Flickable.StopAtBounds
-      model: root.launcher.selectedActions()
-
-      onCountChanged: root.launcher.clampActionSelection()
-
-      delegate: Rectangle {
-        id: actionRow
-
-        required property int index
-        required property var modelData
-
-        readonly property bool selected: index === root.launcher.selectedActionIndex
-        readonly property string iconSource: root.launcher.resolveIconSource(modelData.icon)
-        readonly property bool tintedIcon: modelData.icon && modelData.icon.startsWith("builtin:")
-
-        width: ListView.view.width
-        height: 38
-        radius: 4
-        color: selected ? root.launcher.hoverColor : "transparent"
-        clip: true
-
-        RowLayout {
-          anchors.fill: parent
-          anchors.leftMargin: 12
-          anchors.rightMargin: 10
-          spacing: 8
-          opacity: parent.selected ? 1 : 0.86
-
-          Item {
-            Layout.preferredWidth: 30
-            Layout.preferredHeight: 30
-            Layout.alignment: Qt.AlignVCenter
-
-            Loader {
-              id: actionIconLoader
-
-              property string resolvedSource: actionRow.iconSource
-              property color resolvedColor: actionRow.selected ? root.launcher.primaryColor : root.launcher.textColor
-
-              anchors.centerIn: parent
-              width: 24
-              height: 24
-              active: actionRow.iconSource.length > 0 && actionRow.tintedIcon
-
-              sourceComponent: TintedIcon {
-                width: 24
-                height: 24
-                source: actionIconLoader.resolvedSource
-                color: actionIconLoader.resolvedColor
-              }
+      function onActionModeChanged() {
+        Qt.callLater(function() {
+          if (root.launcher.actionMode) {
+            const di = root.launcher.displayIndexForResult(root.launcher.selectedIndex);
+            const actionCount = root.launcher.selectedActions().length;
+            if (di >= 0 && actionCount > 0) {
+              results.positionViewAtIndex(di + actionCount, ListView.Contain);
             }
-
-            Text {
-              anchors.centerIn: parent
-              horizontalAlignment: Text.AlignHCenter
-              verticalAlignment: Text.AlignVCenter
-              text: actionRow.modelData.label.length > 0 ? actionRow.modelData.label[0].toUpperCase() : "?"
-              color: actionRow.selected ? root.launcher.primaryColor : root.launcher.mutedTextColor
-              font.family: root.launcher.fontFamily
-              font.pixelSize: root.launcher.smallFontSize
-              font.weight: Font.Medium
-              visible: actionRow.iconSource.length === 0
-            }
+          } else {
+            root.positionSelectedResult(ListView.Contain);
           }
-
-          Text {
-            Layout.fillWidth: true
-            Layout.alignment: Qt.AlignVCenter
-            text: actionRow.modelData.label
-            color: root.launcher.textColor
-            font.family: root.launcher.fontFamily
-            font.pixelSize: root.launcher.fontSize
-            font.weight: Font.Medium
-            elide: Text.ElideRight
-            maximumLineCount: 1
-          }
-        }
-
-        MouseArea {
-          anchors.fill: parent
-          hoverEnabled: true
-
-          onEntered: root.launcher.selectedActionIndex = actionRow.index
-          onClicked: root.launcher.activateSelectedAction()
-        }
+        });
       }
     }
 

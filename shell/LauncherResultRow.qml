@@ -26,8 +26,8 @@ Rectangle {
     anchors.right: parent.right
     anchors.top: parent.top
     anchors.bottom: parent.bottom
-    radius: 4
-    color: root.selected ? root.launcher.hoverColor : "transparent"
+    radius: 0
+    color: root.selected && !root.launcher.actionMode ? root.launcher.hoverColor : "transparent"
 
     Behavior on color {
       ColorAnimation {
@@ -70,7 +70,7 @@ Rectangle {
     anchors.leftMargin: 12
     anchors.rightMargin: 10
     spacing: 8
-    opacity: root.selected ? 1 : 0.86
+    opacity: root.selected ? 1 : (root.launcher.actionMode ? 0.35 : 0.86)
 
     Behavior on opacity {
       NumberAnimation {
@@ -160,6 +160,7 @@ Rectangle {
   MouseArea {
     anchors.fill: parent
     hoverEnabled: true
+    enabled: !root.launcher.actionMode
 
     onEntered: root.launcher.selectedIndex = root.rowIndex
     onClicked: root.launcher.activateSelection()

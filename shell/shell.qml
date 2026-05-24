@@ -149,6 +149,18 @@ PanelWindow {
         "result": results[i],
         "resultIndex": i
       });
+
+      if (actionMode && i === selectedIndex) {
+        const actions = results[i].actions || [];
+        for (let j = 0; j < actions.length; j += 1) {
+          rows.push({
+            "type": "action",
+            "action": actions[j],
+            "actionIndex": j,
+            "resultIndex": i
+          });
+        }
+      }
     }
 
     return rows;
