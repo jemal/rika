@@ -179,12 +179,37 @@ pub(crate) fn file_result_with_subtitle(
         icon: if is_dir {
             "builtin:folder".to_string()
         } else {
-            String::new()
+            file_type_icon(path).to_string()
         },
         score,
         default_action: "open".to_string(),
         actions,
         autocomplete: None,
+    }
+}
+
+fn file_type_icon(path: &Path) -> &'static str {
+    let ext = path
+        .extension()
+        .and_then(OsStr::to_str)
+        .map(str::to_ascii_lowercase)
+        .unwrap_or_default();
+
+    match ext.as_str() {
+        "png" | "jpg" | "jpeg" | "gif" | "webp" | "svg" | "bmp" | "ico" | "tiff" | "avif"
+        | "heic" | "heif" => "builtin:file-image",
+        "mp3" | "flac" | "ogg" | "wav" | "m4a" | "aac" | "opus" | "aiff" => "builtin:file-audio",
+        "mp4" | "mkv" | "avi" | "mov" | "webm" | "flv" | "wmv" | "m4v" => "builtin:file-video",
+        "zip" | "tar" | "gz" | "bz2" | "xz" | "7z" | "rar" | "zst" | "tgz" | "tbz2" => {
+            "builtin:file-archive"
+        }
+        "pdf" => "builtin:file-pdf",
+        "txt" | "md" | "rst" | "org" | "tex" | "epub" => "builtin:file-text",
+        "rs" | "py" | "js" | "ts" | "jsx" | "tsx" | "go" | "c" | "cpp" | "h" | "hpp"
+        | "java" | "kt" | "swift" | "rb" | "php" | "cs" | "lua" | "sh" | "bash" | "fish"
+        | "zsh" | "nix" | "toml" | "yaml" | "yml" | "json" | "xml" | "html" | "css" | "scss"
+        | "sass" | "sql" | "qml" | "ini" | "conf" | "cfg" | "csv" => "builtin:file-code",
+        _ => "builtin:file",
     }
 }
 

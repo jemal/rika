@@ -29,7 +29,7 @@ PanelWindow {
   property int tinyFontSize: 10
   property string windowAnchor: "top"
   property int windowWidth: 580
-  property int windowHeight: 316
+  property int windowHeight: 360
   property int windowMargin: 320
   readonly property int visibleResultCount: Math.min(filteredResults().length, maxVisibleResults)
   readonly property int panelWidth: Math.max(240, Math.min(width - 48, windowWidth))

@@ -193,7 +193,7 @@ Rectangle {
     return false;
   }
 
-  radius: 8
+  radius: 12
   color: launcher.surfaceColor
   border.color: launcher.outlineColor
   border.width: 1
@@ -201,123 +201,172 @@ Rectangle {
 
   ColumnLayout {
     anchors.fill: parent
-    anchors.margins: 8
-    spacing: 2
+    spacing: 0
 
+    // ── Search bar ──────────────────────────────────────────────────
     Rectangle {
       Layout.fillWidth: true
-      Layout.preferredHeight: 34
-      color: root.launcher.surfaceColor
+      Layout.preferredHeight: 42
+      color: "transparent"
 
-      TextField {
-        id: input
-
+      RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: 4
-        anchors.rightMargin: 4
-        focus: true
-        text: root.launcher.query
-        color: root.launcher.textColor
-        selectedTextColor: root.launcher.surfaceColor
-        selectionColor: root.launcher.primaryColor
-        placeholderText: "Search"
-        placeholderTextColor: root.launcher.mutedTextColor
-        verticalAlignment: TextInput.AlignVCenter
-        font.family: root.launcher.fontFamily
-        font.pixelSize: root.launcher.fontSize + 1
-        background: null
+        anchors.leftMargin: 14
+        anchors.rightMargin: 12
+        spacing: 8
 
-        onTextChanged: {
-          if (root.applyingAutocomplete || root.launcher.query === text) {
-            return;
+        Item {
+          Layout.preferredWidth: 15
+          Layout.preferredHeight: 15
+          Layout.alignment: Qt.AlignVCenter
+
+          TintedIcon {
+            anchors.centerIn: parent
+            width: 15
+            height: 15
+            source: root.launcher.resolveIconSource("builtin:search")
+            color: root.launcher.mutedTextColor
           }
-
-          root.launcher.exitActionMode();
-          root.launcher.ipcError = "";
-          root.launcher.query = text;
-          root.launcher.selectedIndex = 0;
-          root.launcher.sendQuery(text);
         }
 
-        Keys.onPressed: event => {
-          const count = root.launcher.filteredResults().length;
+        TextField {
+          id: input
 
-          if (root.handleKeybind(event)) {
-            return;
+          Layout.fillWidth: true
+          focus: true
+          text: root.launcher.query
+          color: root.launcher.textColor
+          selectedTextColor: root.launcher.surfaceColor
+          selectionColor: root.launcher.primaryColor
+          placeholderText: "Search"
+          placeholderTextColor: root.launcher.mutedTextColor
+          verticalAlignment: TextInput.AlignVCenter
+          font.family: root.launcher.fontFamily
+          font.pixelSize: root.launcher.fontSize + 1
+          background: null
+
+          onTextChanged: {
+            if (root.applyingAutocomplete || root.launcher.query === text) {
+              return;
+            }
+
+            root.launcher.exitActionMode();
+            root.launcher.ipcError = "";
+            root.launcher.query = text;
+            root.launcher.selectedIndex = 0;
+            root.launcher.sendQuery(text);
           }
 
-          if (root.launcher.actionMode) {
-            if (event.key === Qt.Key_Escape || event.key === Qt.Key_Left || event.key === Qt.Key_Backspace) {
-              root.launcher.exitActionMode();
-              event.accepted = true;
-            } else if (event.key === Qt.Key_Down || (event.key === Qt.Key_J && event.modifiers & Qt.ControlModifier)) {
-              root.launcher.selectNextAction();
-              event.accepted = true;
-            } else if (event.key === Qt.Key_Up || (event.key === Qt.Key_K && event.modifiers & Qt.ControlModifier)) {
-              root.launcher.selectPreviousAction();
-              event.accepted = true;
-            } else if (event.key === Qt.Key_Backtab) {
-              root.launcher.selectPreviousAction();
-              event.accepted = true;
-            } else if (event.key === Qt.Key_Tab) {
-              if (event.modifiers & Qt.ShiftModifier) {
-                root.launcher.selectPreviousAction();
-              } else {
+          Keys.onPressed: event => {
+            const count = root.launcher.filteredResults().length;
+
+            if (root.handleKeybind(event)) {
+              return;
+            }
+
+            if (root.launcher.actionMode) {
+              if (event.key === Qt.Key_Escape || event.key === Qt.Key_Left || event.key === Qt.Key_Backspace) {
+                root.launcher.exitActionMode();
+                event.accepted = true;
+              } else if (event.key === Qt.Key_Down || (event.key === Qt.Key_J && event.modifiers & Qt.ControlModifier)) {
                 root.launcher.selectNextAction();
+                event.accepted = true;
+              } else if (event.key === Qt.Key_Up || (event.key === Qt.Key_K && event.modifiers & Qt.ControlModifier)) {
+                root.launcher.selectPreviousAction();
+                event.accepted = true;
+              } else if (event.key === Qt.Key_Backtab) {
+                root.launcher.selectPreviousAction();
+                event.accepted = true;
+              } else if (event.key === Qt.Key_Tab) {
+                if (event.modifiers & Qt.ShiftModifier) {
+                  root.launcher.selectPreviousAction();
+                } else {
+                  root.launcher.selectNextAction();
+                }
+                event.accepted = true;
+              } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                root.launcher.activateSelectedAction();
+                event.accepted = true;
+              }
+
+              return;
+            }
+
+            if (event.key === Qt.Key_K && event.modifiers & Qt.ControlModifier && count > 0) {
+              root.launcher.enterActionMode();
+              event.accepted = true;
+            } else if (event.key === Qt.Key_Escape) {
+              root.launcher.closeLauncher();
+              event.accepted = true;
+            } else if (event.key === Qt.Key_R && event.modifiers & Qt.ControlModifier) {
+              root.launcher.refreshProviders();
+              event.accepted = true;
+            } else if (event.key === Qt.Key_Down && event.modifiers & Qt.ControlModifier && count > 0) {
+              root.selectNextSection();
+              event.accepted = true;
+            } else if (event.key === Qt.Key_Up && event.modifiers & Qt.ControlModifier && count > 0) {
+              root.selectPreviousSection();
+              event.accepted = true;
+            } else if (event.key === Qt.Key_Down && count > 0) {
+              root.selectNextResult();
+              event.accepted = true;
+            } else if (event.key === Qt.Key_Up && count > 0) {
+              root.selectPreviousResult();
+              event.accepted = true;
+            } else if (event.key === Qt.Key_Backtab && count > 0) {
+              root.selectPreviousResult();
+              event.accepted = true;
+            } else if (event.key === Qt.Key_Tab && count > 0) {
+              if (event.modifiers & Qt.ShiftModifier) {
+                root.selectPreviousResult();
+              } else {
+                root.selectNextResult();
               }
               event.accepted = true;
             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-              root.launcher.activateSelectedAction();
+              root.launcher.activateSelection();
               event.accepted = true;
             }
-
-            return;
           }
+        }
 
-          if (event.key === Qt.Key_K && event.modifiers & Qt.ControlModifier && count > 0) {
-            root.launcher.enterActionMode();
-            event.accepted = true;
-          } else if (event.key === Qt.Key_Escape) {
-            root.launcher.closeLauncher();
-            event.accepted = true;
-          } else if (event.key === Qt.Key_R && event.modifiers & Qt.ControlModifier) {
-            root.launcher.refreshProviders();
-            event.accepted = true;
-          } else if (event.key === Qt.Key_Down && event.modifiers & Qt.ControlModifier && count > 0) {
-            root.selectNextSection();
-            event.accepted = true;
-          } else if (event.key === Qt.Key_Up && event.modifiers & Qt.ControlModifier && count > 0) {
-            root.selectPreviousSection();
-            event.accepted = true;
-          } else if (event.key === Qt.Key_Down && count > 0) {
-            root.selectNextResult();
-            event.accepted = true;
-          } else if (event.key === Qt.Key_Up && count > 0) {
-            root.selectPreviousResult();
-            event.accepted = true;
-          } else if (event.key === Qt.Key_Backtab && count > 0) {
-            root.selectPreviousResult();
-            event.accepted = true;
-          } else if (event.key === Qt.Key_Tab && count > 0) {
-            if (event.modifiers & Qt.ShiftModifier) {
-              root.selectPreviousResult();
-            } else {
-              root.selectNextResult();
-            }
-            event.accepted = true;
-          } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-            root.launcher.activateSelection();
-            event.accepted = true;
-          }
+        Text {
+          readonly property int _count: root.launcher.actionMode
+            ? root.launcher.selectedActions().length
+            : root.launcher.filteredResults().length
+          readonly property int _index: root.launcher.actionMode
+            ? root.launcher.selectedActionIndex
+            : root.launcher.selectedIndex
+
+          visible: root.launcher.footerStatus.length > 0 || _count > 0
+          text: root.launcher.footerStatus.length > 0
+            ? root.launcher.footerStatus
+            : (_count > 0 ? `${_index + 1}/${_count}` : "")
+          color: root.launcher.footerStatus.length > 0
+            ? root.launcher.accentColor
+            : root.launcher.mutedTextColor
+          font.family: root.launcher.fontFamily
+          font.pixelSize: root.launcher.tinyFontSize
+          Layout.alignment: Qt.AlignVCenter
         }
       }
     }
 
+    // ── Divider ─────────────────────────────────────────────────────
+    Rectangle {
+      Layout.fillWidth: true
+      Layout.preferredHeight: 1
+      color: root.launcher.outlineColor
+    }
+
+    // ── Results ─────────────────────────────────────────────────────
     ListView {
       id: results
 
       Layout.fillWidth: true
       Layout.fillHeight: true
+      Layout.topMargin: 4
+      Layout.bottomMargin: 4
       visible: !root.launcher.actionMode
       clip: true
       spacing: 0
@@ -359,7 +408,7 @@ Rectangle {
         required property var modelData
 
         width: ListView.view.width
-        height: modelData.type === "section" ? 22 : 44
+        height: modelData.type === "section" ? 26 : 48
         sourceComponent: modelData.type === "section" ? sectionComponent : resultComponent
 
         Component {
@@ -413,11 +462,14 @@ Rectangle {
       }
     }
 
+    // ── Actions ─────────────────────────────────────────────────────
     ListView {
       id: actions
 
       Layout.fillWidth: true
       Layout.fillHeight: true
+      Layout.topMargin: 4
+      Layout.bottomMargin: 4
       visible: root.launcher.actionMode
       clip: true
       spacing: 0
@@ -437,21 +489,21 @@ Rectangle {
         readonly property bool tintedIcon: modelData.icon && modelData.icon.startsWith("builtin:")
 
         width: ListView.view.width
-        height: 34
-        radius: 5
+        height: 38
+        radius: 4
         color: selected ? root.launcher.hoverColor : "transparent"
         clip: true
 
         RowLayout {
           anchors.fill: parent
-          anchors.leftMargin: 10
-          anchors.rightMargin: 8
+          anchors.leftMargin: 12
+          anchors.rightMargin: 10
           spacing: 8
           opacity: parent.selected ? 1 : 0.86
 
           Item {
-            Layout.preferredWidth: 24
-            Layout.preferredHeight: 24
+            Layout.preferredWidth: 26
+            Layout.preferredHeight: 26
             Layout.alignment: Qt.AlignVCenter
 
             Loader {
@@ -461,13 +513,13 @@ Rectangle {
               property color resolvedColor: actionRow.selected ? root.launcher.primaryColor : root.launcher.textColor
 
               anchors.centerIn: parent
-              width: 18
-              height: 18
+              width: 20
+              height: 20
               active: actionRow.iconSource.length > 0 && actionRow.tintedIcon
 
               sourceComponent: TintedIcon {
-                width: 18
-                height: 18
+                width: 20
+                height: 20
                 source: actionIconLoader.resolvedSource
                 color: actionIconLoader.resolvedColor
               }
@@ -509,89 +561,98 @@ Rectangle {
       }
     }
 
-    RowLayout {
+    // ── Divider ─────────────────────────────────────────────────────
+    Rectangle {
       Layout.fillWidth: true
-      Layout.preferredHeight: 22
-      spacing: 8
+      Layout.preferredHeight: 1
+      color: root.launcher.outlineColor
+    }
 
-      Text {
-        Layout.fillWidth: true
-        text: {
-          if (root.launcher.footerStatus.length > 0) {
-            return root.launcher.footerStatus;
-          }
+    // ── Footer ──────────────────────────────────────────────────────
+    Rectangle {
+      Layout.fillWidth: true
+      Layout.preferredHeight: 28
+      color: "transparent"
 
-          if (root.launcher.actionMode) {
-            const count = root.launcher.selectedActions().length;
-            return count > 0 ? `Action ${root.launcher.selectedActionIndex + 1}/${count}` : "Action 0/0";
-          }
+      RowLayout {
+        anchors.fill: parent
+        anchors.leftMargin: 14
+        anchors.rightMargin: 12
+        anchors.topMargin: 4
+        anchors.bottomMargin: 4
+        spacing: 4
 
-          const count = root.launcher.filteredResults().length;
-          return count > 0 ? `${root.launcher.selectedIndex + 1}/${count}` : "0/0";
+        Text {
+          text: root.launcher.primaryActionLabel()
+          color: root.launcher.textColor
+          font.family: root.launcher.fontFamily
+          font.pixelSize: root.launcher.smallFontSize
+          font.weight: Font.Medium
         }
-        color: root.launcher.footerStatus.length > 0 ? root.launcher.accentColor : root.launcher.mutedTextColor
-        font.family: root.launcher.fontFamily
-        font.pixelSize: root.launcher.smallFontSize
-      }
 
-      Text {
-        text: root.launcher.primaryActionLabel()
-        color: root.launcher.textColor
-        font.family: root.launcher.fontFamily
-        font.pixelSize: root.launcher.smallFontSize
-      }
+        Text {
+          text: "↵"
+          color: root.launcher.mutedTextColor
+          font.family: root.launcher.fontFamily
+          font.pixelSize: root.launcher.smallFontSize
+        }
 
-      Text {
-        text: "enter"
-        color: root.launcher.mutedTextColor
-        font.family: root.launcher.fontFamily
-        font.pixelSize: root.launcher.smallFontSize
-      }
+        Item {
+          Layout.fillWidth: true
+        }
 
-      Text {
-        text: root.launcher.actionMode ? "Back" : "Actions"
-        color: root.launcher.textColor
-        font.family: root.launcher.fontFamily
-        font.pixelSize: root.launcher.smallFontSize
-      }
+        Text {
+          text: "Back"
+          color: root.launcher.textColor
+          font.family: root.launcher.fontFamily
+          font.pixelSize: root.launcher.smallFontSize
+          visible: root.launcher.actionMode
+        }
 
-      Text {
-        text: root.launcher.actionMode ? "esc" : "ctrl-k"
-        color: root.launcher.mutedTextColor
-        font.family: root.launcher.fontFamily
-        font.pixelSize: root.launcher.smallFontSize
-      }
+        Text {
+          text: "⎋"
+          color: root.launcher.mutedTextColor
+          font.family: root.launcher.fontFamily
+          font.pixelSize: root.launcher.smallFontSize
+          visible: root.launcher.actionMode
+        }
 
-      Text {
-        text: root.launcher.actionMode ? "" : "Refresh"
-        color: root.launcher.textColor
-        font.family: root.launcher.fontFamily
-        font.pixelSize: root.launcher.smallFontSize
-        visible: !root.launcher.actionMode
-      }
+        Text {
+          text: "Actions"
+          color: root.launcher.textColor
+          font.family: root.launcher.fontFamily
+          font.pixelSize: root.launcher.smallFontSize
+          visible: !root.launcher.actionMode
+        }
 
-      Text {
-        text: "ctrl-r"
-        color: root.launcher.mutedTextColor
-        font.family: root.launcher.fontFamily
-        font.pixelSize: root.launcher.smallFontSize
-        visible: !root.launcher.actionMode
-      }
+        Text {
+          text: "⌃K"
+          color: root.launcher.mutedTextColor
+          font.family: root.launcher.fontFamily
+          font.pixelSize: root.launcher.smallFontSize
+          visible: !root.launcher.actionMode
+        }
 
-      Text {
-        text: "Close"
-        color: root.launcher.textColor
-        font.family: root.launcher.fontFamily
-        font.pixelSize: root.launcher.smallFontSize
-        visible: !root.launcher.actionMode
-      }
+        Item {
+          Layout.preferredWidth: 6
+          visible: !root.launcher.actionMode
+        }
 
-      Text {
-        text: "esc"
-        color: root.launcher.mutedTextColor
-        font.family: root.launcher.fontFamily
-        font.pixelSize: root.launcher.smallFontSize
-        visible: !root.launcher.actionMode
+        Text {
+          text: "Refresh"
+          color: root.launcher.textColor
+          font.family: root.launcher.fontFamily
+          font.pixelSize: root.launcher.smallFontSize
+          visible: !root.launcher.actionMode
+        }
+
+        Text {
+          text: "⌃R"
+          color: root.launcher.mutedTextColor
+          font.family: root.launcher.fontFamily
+          font.pixelSize: root.launcher.smallFontSize
+          visible: !root.launcher.actionMode
+        }
       }
     }
   }

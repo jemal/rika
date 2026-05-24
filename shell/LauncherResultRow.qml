@@ -16,8 +16,8 @@ Rectangle {
   readonly property bool selected: rowIndex === launcher.selectedIndex
 
   width: ListView.view.width
-  height: 44
-  radius: 5
+  height: 48
+  radius: 0
   color: "transparent"
   clip: true
 
@@ -26,7 +26,7 @@ Rectangle {
     anchors.right: parent.right
     anchors.top: parent.top
     anchors.bottom: parent.bottom
-    radius: 5
+    radius: 4
     color: root.selected ? root.launcher.hoverColor : "transparent"
 
     Behavior on color {
@@ -41,8 +41,8 @@ Rectangle {
     anchors.left: parent.left
     anchors.leftMargin: 2
     y: Math.round((root.height - height) / 2)
-    width: 2
-    height: root.selected ? 18 : 0
+    width: 3
+    height: root.selected ? 20 : 0
     radius: 1
     color: root.launcher.primaryColor
     opacity: root.selected ? 1 : 0
@@ -67,8 +67,8 @@ Rectangle {
     anchors.right: parent.right
     anchors.top: parent.top
     anchors.bottom: parent.bottom
-    anchors.leftMargin: 10
-    anchors.rightMargin: 8
+    anchors.leftMargin: 12
+    anchors.rightMargin: 10
     spacing: 8
     opacity: root.selected ? 1 : 0.86
 
@@ -80,14 +80,14 @@ Rectangle {
     }
 
     Item {
-      Layout.preferredWidth: 24
-      Layout.preferredHeight: 24
+      Layout.preferredWidth: 26
+      Layout.preferredHeight: 26
       Layout.alignment: Qt.AlignVCenter
 
       Loader {
         anchors.centerIn: parent
-        width: 18
-        height: 18
+        width: 20
+        height: 20
         active: root.iconSource.length > 0 && !root.tintedIcon
 
         sourceComponent: IconImage {
@@ -103,13 +103,13 @@ Rectangle {
         property color resolvedColor: root.selected ? root.launcher.primaryColor : root.launcher.textColor
 
         anchors.centerIn: parent
-        width: 18
-        height: 18
+        width: 20
+        height: 20
         active: root.iconSource.length > 0 && root.tintedIcon
 
         sourceComponent: TintedIcon {
-          width: 18
-          height: 18
+          width: 20
+          height: 20
           source: tintedIconLoader.resolvedSource
           color: tintedIconLoader.resolvedColor
         }
