@@ -36,7 +36,7 @@ use crate::{
 struct Project {
     path: PathBuf,
     title: String,
-    parent: String,
+    root_alias: String,
 }
 
 pub struct ProjectsProvider {
@@ -85,19 +85,21 @@ impl Provider for ProjectsProvider {
     }
 
     fn search(&self, query: &str) -> Vec<SearchResult> {
-        let query = query.trim().to_lowercase();
+        let query = query.trim();
         if query.is_empty() {
             return vec![];
         }
 
+        let (candidates, effective_query) = scoped_query(&self.projects, query);
+        let effective_query = effective_query.to_lowercase();
         let mut results = vec![];
 
-        for project in &self.projects {
+        for project in candidates {
             let title = project.title.to_lowercase();
             let path = project.path.to_string_lossy().to_lowercase();
-            let score = if title.contains(&query) {
+            let score = if title.contains(&effective_query) {
                 1.0
-            } else if path.contains(&query) {
+            } else if path.contains(&effective_query) {
                 0.5
             } else {
                 -1.0
@@ -110,7 +112,7 @@ impl Provider for ProjectsProvider {
                     kind: ResultKind::Project,
                     section: "Projects".to_string(),
                     title: project.title.clone(),
-                    subtitle: project.parent.clone(),
+                    subtitle: project.root_alias.clone(),
                     icon: "builtin:folder-git-2".to_string(),
                     score,
                     default_action: "open_terminal".to_string(),
@@ -157,11 +159,40 @@ impl Provider for ProjectsProvider {
     }
 }
 
+fn scoped_query<'a>(projects: &'a [Project], query: &'a str) -> (Vec<&'a Project>, &'a str) {
+    let Some((first, rest)) = query.split_once(char::is_whitespace) else {
+        return (projects.iter().collect(), query);
+    };
+
+    let rest = rest.trim_start();
+    if rest.is_empty() {
+        return (projects.iter().collect(), query);
+    }
+
+    let matches: Vec<&Project> = projects
+        .iter()
+        .filter(|p| p.root_alias.eq_ignore_ascii_case(first))
+        .collect();
+
+    if matches.is_empty() {
+        (projects.iter().collect(), query)
+    } else {
+        (matches, rest)
+    }
+}
+
 fn discover_projects(roots: &[String]) -> Vec<Project> {
     let mut projects = vec![];
 
     for root in roots {
         let root_path = expand_home(root);
+        let root_alias = root_path
+            .canonicalize()
+            .unwrap_or_else(|_| root_path.clone())
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .filter(|n| !n.is_empty())
+            .unwrap_or_else(|| root_path.display().to_string());
         let entries = match fs::read_dir(&root_path) {
             Ok(entries) => entries,
             Err(err) => {
@@ -215,15 +246,11 @@ fn discover_projects(roots: &[String]) -> Vec<Project> {
             else {
                 continue;
             };
-            let parent = path
-                .parent()
-                .map(|parent| parent.to_string_lossy().to_string())
-                .unwrap_or_default();
 
             projects.push(Project {
                 path,
                 title,
-                parent,
+                root_alias: root_alias.clone(),
             });
         }
     }
@@ -496,6 +523,110 @@ mod tests {
         let projects = discover_projects(&[root.to_string_lossy().to_string()]);
 
         assert!(projects.is_empty());
+    }
+
+    #[test]
+    fn alias_prefix_scopes_to_matching_root() {
+        let root_a = temp_dir("scope-a");
+        let root_b = temp_dir("scope-b");
+        fs::create_dir_all(root_a.join("shared")).expect("project directory should be created");
+        fs::create_dir_all(root_b.join("shared")).expect("project directory should be created");
+        fs::create_dir_all(root_a.join("unique-a")).expect("project directory should be created");
+        fs::create_dir_all(root_b.join("unique-b")).expect("project directory should be created");
+        let root_a_name = root_a.file_name().unwrap().to_string_lossy().to_string();
+        let root_b_name = root_b.file_name().unwrap().to_string_lossy().to_string();
+        let provider = ProjectsProvider::new(&ProjectsProviderConfig {
+            enabled: true,
+            roots: vec![
+                root_a.to_string_lossy().to_string(),
+                root_b.to_string_lossy().to_string(),
+            ],
+            kitty_command: "kitty".to_string(),
+            kitty_remote: "auto".to_string(),
+        });
+
+        let scoped_a = provider.search(&format!("{root_a_name} shared"));
+        let scoped_b = provider.search(&format!("{root_b_name} shared"));
+
+        assert_eq!(scoped_a.len(), 1);
+        assert_eq!(scoped_a[0].title, "shared");
+        assert_eq!(scoped_a[0].id, root_a.join("shared").canonicalize().unwrap().to_string_lossy());
+
+        assert_eq!(scoped_b.len(), 1);
+        assert_eq!(scoped_b[0].title, "shared");
+        assert_eq!(scoped_b[0].id, root_b.join("shared").canonicalize().unwrap().to_string_lossy());
+
+        let _ = fs::remove_dir_all(root_a);
+        let _ = fs::remove_dir_all(root_b);
+    }
+
+    #[test]
+    fn unscoped_query_searches_all_roots() {
+        let root_a = temp_dir("unscoped-a");
+        let root_b = temp_dir("unscoped-b");
+        fs::create_dir_all(root_a.join("alpha")).expect("project directory should be created");
+        fs::create_dir_all(root_b.join("alpha")).expect("project directory should be created");
+        let provider = ProjectsProvider::new(&ProjectsProviderConfig {
+            enabled: true,
+            roots: vec![
+                root_a.to_string_lossy().to_string(),
+                root_b.to_string_lossy().to_string(),
+            ],
+            kitty_command: "kitty".to_string(),
+            kitty_remote: "auto".to_string(),
+        });
+
+        let results = provider.search("alpha");
+
+        assert_eq!(results.len(), 2);
+        assert!(results.iter().all(|r| r.title == "alpha"));
+
+        let _ = fs::remove_dir_all(root_a);
+        let _ = fs::remove_dir_all(root_b);
+    }
+
+    #[test]
+    fn non_matching_prefix_uses_full_query() {
+        let root = temp_dir("fallback");
+        fs::create_dir_all(root.join("myproject")).expect("project directory should be created");
+        let provider = ProjectsProvider::new(&ProjectsProviderConfig {
+            enabled: true,
+            roots: vec![root.to_string_lossy().to_string()],
+            kitty_command: "kitty".to_string(),
+            kitty_remote: "auto".to_string(),
+        });
+
+        // "unknown" doesn't match any root alias, so the full query "unknown myproject" is
+        // searched as-is — it doesn't match the title "myproject" as a substring
+        let results = provider.search("unknown myproject");
+        assert!(results.is_empty());
+
+        // without the non-matching prefix the project is found normally
+        let results = provider.search("myproject");
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].title, "myproject");
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn scoped_query_alias_with_no_trailing_content_is_unscoped() {
+        // scoped_query only scopes when there is whitespace AND non-empty remainder
+        let projects = vec![Project {
+            path: PathBuf::from("/tmp/root/foo"),
+            title: "foo".to_string(),
+            root_alias: "root".to_string(),
+        }];
+
+        // "root" alone — no whitespace, falls back to unscoped
+        let (candidates, query) = scoped_query(&projects, "root");
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(query, "root");
+
+        // "root " — whitespace but empty rest, falls back to unscoped
+        let (candidates, query) = scoped_query(&projects, "root ");
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(query, "root ");
     }
 
     #[test]
