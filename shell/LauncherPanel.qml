@@ -54,6 +54,24 @@ Rectangle {
     }
   }
 
+  function applySelectedAutocomplete() {
+    if (launcher.actionMode) {
+      return false;
+    }
+
+    const results = launcher.filteredResults();
+    const result = results[launcher.selectedIndex];
+    if (!result || !result.autocomplete || result.autocomplete === input.text) {
+      return false;
+    }
+
+    root.applyingAutocomplete = true;
+    input.text = result.autocomplete;
+    input.cursorPosition = input.text.length;
+    root.applyingAutocomplete = false;
+    return true;
+  }
+
   function selectNextResult() {
     const count = launcher.filteredResults().length;
 
@@ -326,6 +344,8 @@ Rectangle {
             } else if (event.key === Qt.Key_Tab && count > 0) {
               if (event.modifiers & Qt.ShiftModifier) {
                 root.selectPreviousResult();
+              } else if (root.applySelectedAutocomplete()) {
+                // Keep the first selected suggestion usable without cycling away and back.
               } else {
                 root.selectNextResult();
               }

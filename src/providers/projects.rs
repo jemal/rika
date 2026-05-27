@@ -550,11 +550,25 @@ mod tests {
 
         assert_eq!(scoped_a.len(), 1);
         assert_eq!(scoped_a[0].title, "shared");
-        assert_eq!(scoped_a[0].id, root_a.join("shared").canonicalize().unwrap().to_string_lossy());
+        assert_eq!(
+            scoped_a[0].id,
+            root_a
+                .join("shared")
+                .canonicalize()
+                .unwrap()
+                .to_string_lossy()
+        );
 
         assert_eq!(scoped_b.len(), 1);
         assert_eq!(scoped_b[0].title, "shared");
-        assert_eq!(scoped_b[0].id, root_b.join("shared").canonicalize().unwrap().to_string_lossy());
+        assert_eq!(
+            scoped_b[0].id,
+            root_b
+                .join("shared")
+                .canonicalize()
+                .unwrap()
+                .to_string_lossy()
+        );
 
         let _ = fs::remove_dir_all(root_a);
         let _ = fs::remove_dir_all(root_b);

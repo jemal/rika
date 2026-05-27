@@ -205,10 +205,10 @@ fn file_type_icon(path: &Path) -> &'static str {
         }
         "pdf" => "builtin:file-pdf",
         "txt" | "md" | "rst" | "org" | "tex" | "epub" | "csv" => "builtin:file-text",
-        "rs" | "py" | "js" | "ts" | "jsx" | "tsx" | "go" | "c" | "cpp" | "h" | "hpp"
-        | "java" | "kt" | "swift" | "rb" | "php" | "cs" | "lua" | "sh" | "bash" | "fish"
-        | "zsh" | "nix" | "toml" | "yaml" | "yml" | "json" | "xml" | "html" | "css" | "scss"
-        | "sass" | "sql" | "qml" | "ini" | "conf" | "cfg" => "builtin:file-code",
+        "rs" | "py" | "js" | "ts" | "jsx" | "tsx" | "go" | "c" | "cpp" | "h" | "hpp" | "java"
+        | "kt" | "swift" | "rb" | "php" | "cs" | "lua" | "sh" | "bash" | "fish" | "zsh" | "nix"
+        | "toml" | "yaml" | "yml" | "json" | "xml" | "html" | "css" | "scss" | "sass" | "sql"
+        | "qml" | "ini" | "conf" | "cfg" => "builtin:file-code",
         _ => "builtin:file",
     }
 }

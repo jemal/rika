@@ -8,6 +8,7 @@ use serde::{
 
 use crate::providers::{
     apps::AppsProviderConfig,
+    calculator::CalculatorProviderConfig,
     commands::CommandsProviderConfig,
     file_search::FileSearchProviderConfig,
     files::FilesProviderConfig,
@@ -78,6 +79,7 @@ pub enum LauncherWindowAnchor {
 #[serde(default, deny_unknown_fields)]
 pub struct Providers {
     pub apps: AppsProviderConfig,
+    pub calculator: CalculatorProviderConfig,
     pub commands: CommandsProviderConfig,
     pub file_search: FileSearchProviderConfig,
     pub files: FilesProviderConfig,
@@ -127,6 +129,7 @@ mod tests {
             .expect("packaged config should deserialize");
 
         assert!(config.providers.projects.enabled);
+        assert!(config.providers.calculator.enabled);
         assert!(config.providers.files.enabled);
         assert!(!config.providers.file_search.enabled);
         assert!(config.providers.file_search.roots.is_empty());

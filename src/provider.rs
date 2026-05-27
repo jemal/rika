@@ -27,6 +27,7 @@ pub struct SearchResult {
 #[serde(rename_all = "snake_case")]
 pub enum ResultKind {
     App,
+    Calculator,
     Command,
     Directory,
     File,

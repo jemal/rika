@@ -3,6 +3,7 @@ use crate::{
     provider::Provider,
     providers::{
         apps::AppsProvider,
+        calculator::CalculatorProvider,
         commands::CommandsProvider,
         file_search::FileSearchProvider,
         files::FilesProvider,
@@ -12,6 +13,7 @@ use crate::{
 };
 
 pub mod apps;
+pub mod calculator;
 pub mod commands;
 pub mod file_search;
 pub mod files;
@@ -30,6 +32,12 @@ const PROVIDERS: &[ProviderSpec] = &[
         id: "apps",
         enabled: |config| config.providers.apps.enabled,
         build: |config| Box::new(AppsProvider::new(&config.providers.apps)),
+        rebuild_on_config_reload: true,
+    },
+    ProviderSpec {
+        id: "calculator",
+        enabled: |config| config.providers.calculator.enabled,
+        build: |config| Box::new(CalculatorProvider::new(&config.providers.calculator)),
         rebuild_on_config_reload: true,
     },
     ProviderSpec {

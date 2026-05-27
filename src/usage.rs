@@ -337,6 +337,7 @@ fn section_rank(section: &str) -> u8 {
     match section {
         "Favorites" => 0,
         "Recent" => 1,
+        "Calculator" => 2,
         "Apps" => 4,
         "Projects" => 5,
         "Files" => 10,

@@ -16,6 +16,9 @@
     "apps": {
       "enabled": true
     },
+    "calculator": {
+      "enabled": true
+    },
     "commands": {
       "enabled": true,
       "cmds": []
