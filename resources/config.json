@@ -39,8 +39,35 @@
       "roots": [
         "~/dev/projects"
       ],
-      "kitty_command": "kitty",
-      "kitty_remote": "auto"
+      "default_action": "open_terminal",
+      "actions": [
+        {
+          "id": "open_terminal",
+          "label": "Open",
+          "command": "kitty",
+          "args": [
+            "--working-directory",
+            "{{path}}"
+          ],
+          "icon": "builtin:terminal",
+          "cwd": ""
+        },
+        {
+          "id": "open_zellij",
+          "label": "Open in Zellij",
+          "command": "kitty",
+          "args": [
+            "--working-directory",
+            "{{path}}",
+            "zellij",
+            "attach",
+            "--create",
+            "{{session}}"
+          ],
+          "icon": "builtin:terminal",
+          "cwd": ""
+        }
+      ]
     },
     "web_search": {
       "enabled": true,

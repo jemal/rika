@@ -1,13 +1,11 @@
 use std::{
     fs,
-    os::unix::fs::FileTypeExt,
     path::{
         Path,
         PathBuf,
     },
     process::{
         Command,
-        Output,
         Stdio,
     },
     thread,
@@ -41,8 +39,8 @@ struct Project {
 
 pub struct ProjectsProvider {
     roots: Vec<String>,
-    kitty_command: String,
-    kitty_remote: String,
+    default_action: String,
+    actions: Vec<ProjectActionConfig>,
     projects: Vec<Project>,
 }
 
@@ -51,8 +49,22 @@ pub struct ProjectsProvider {
 pub struct ProjectsProviderConfig {
     pub enabled: bool,
     pub roots: Vec<String>,
-    pub kitty_command: String,
-    pub kitty_remote: String,
+    pub default_action: String,
+    pub actions: Vec<ProjectActionConfig>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProjectActionConfig {
+    id: String,
+    label: String,
+    command: String,
+    #[serde(default)]
+    args: Vec<String>,
+    #[serde(default)]
+    icon: String,
+    #[serde(default = "default_project_action_cwd")]
+    cwd: String,
 }
 
 impl Default for ProjectsProviderConfig {
@@ -60,8 +72,8 @@ impl Default for ProjectsProviderConfig {
         Self {
             enabled: true,
             roots: vec!["~/dev/projects".to_string()],
-            kitty_command: "kitty".to_string(),
-            kitty_remote: "auto".to_string(),
+            default_action: "open_project".to_string(),
+            actions: default_project_actions(),
         }
     }
 }
@@ -69,11 +81,12 @@ impl Default for ProjectsProviderConfig {
 impl ProjectsProvider {
     pub fn new(config: &ProjectsProviderConfig) -> Self {
         let projects = discover_projects(&config.roots);
+        let default_action = valid_default_action(&config.default_action, &config.actions);
 
         Self {
             roots: config.roots.clone(),
-            kitty_command: config.kitty_command.clone(),
-            kitty_remote: config.kitty_remote.clone(),
+            default_action,
+            actions: config.actions.clone(),
             projects,
         }
     }
@@ -106,6 +119,13 @@ impl Provider for ProjectsProvider {
             };
 
             if score > 0.0 {
+                let mut actions: Vec<SearchAction> = self
+                    .actions
+                    .iter()
+                    .map(|action| SearchAction::new(&action.id, &action.label, &action.icon))
+                    .collect();
+                actions.push(SearchAction::new("copy_path", "Copy Path", "").immediate());
+
                 results.push(SearchResult {
                     id: project.path.to_string_lossy().to_string(),
                     provider: self.id(),
@@ -115,11 +135,8 @@ impl Provider for ProjectsProvider {
                     subtitle: project.root_alias.clone(),
                     icon: "builtin:folder-git-2".to_string(),
                     score,
-                    default_action: "open_terminal".to_string(),
-                    actions: vec![
-                        SearchAction::new("open_terminal", "Open", "builtin:terminal"),
-                        SearchAction::new("copy_path", "Copy Path", "").immediate(),
-                    ],
+                    default_action: self.default_action.clone(),
+                    actions,
                     autocomplete: None,
                 });
             }
@@ -145,11 +162,14 @@ impl Provider for ProjectsProvider {
         };
 
         match action {
-            "open_terminal" => {
-                open_in_kitty(&self.kitty_command, &self.kitty_remote, &project.path)
-            }
             "copy_path" => clipboard::copy_text(&project.path.to_string_lossy()),
-            _ => bail!("unsupported project action: {action}"),
+            action_id => {
+                let Some(action) = self.actions.iter().find(|action| action.id == action_id) else {
+                    bail!("unsupported project action: {action_id}");
+                };
+
+                run_project_action(action, project)
+            }
         }
     }
 
@@ -157,6 +177,32 @@ impl Provider for ProjectsProvider {
         self.projects = discover_projects(&self.roots);
         Ok(())
     }
+}
+
+fn default_project_actions() -> Vec<ProjectActionConfig> {
+    vec![ProjectActionConfig {
+        id: "open_project".to_string(),
+        label: "Open".to_string(),
+        command: "xdg-open".to_string(),
+        args: vec!["{{path}}".to_string()],
+        icon: "builtin:folder".to_string(),
+        cwd: String::new(),
+    }]
+}
+
+fn default_project_action_cwd() -> String {
+    "{{path}}".to_string()
+}
+
+fn valid_default_action(default_action: &str, actions: &[ProjectActionConfig]) -> String {
+    if default_action == "copy_path" || actions.iter().any(|action| action.id == default_action) {
+        return default_action.to_string();
+    }
+
+    actions
+        .first()
+        .map(|action| action.id.clone())
+        .unwrap_or_else(|| "copy_path".to_string())
 }
 
 fn scoped_query<'a>(projects: &'a [Project], query: &'a str) -> (Vec<&'a Project>, &'a str) {
@@ -275,66 +321,44 @@ fn expand_home(path: &str) -> PathBuf {
     PathBuf::from(path)
 }
 
-fn open_in_kitty(kitty_command: &str, kitty_remote: &str, path: &Path) -> anyhow::Result<()> {
-    let Some(remote) = resolve_kitty_remote(kitty_command, kitty_remote)? else {
-        return open_kitty_window(kitty_command, path);
-    };
-
-    match open_kitty_tab(kitty_command, &remote, path) {
-        Ok(()) => Ok(()),
-        Err(err) if kitty_remote == "auto" => {
-            eprintln!("kitty remote launch failed, falling back to a new window: {err}");
-            open_kitty_window(kitty_command, path)
-        }
-        Err(err) => Err(err),
+fn run_project_action(action: &ProjectActionConfig, project: &Project) -> anyhow::Result<()> {
+    if action.command.trim().is_empty() {
+        bail!("project action command is empty: {}", action.id);
     }
-}
 
-fn open_kitty_tab(kitty_command: &str, remote: &str, path: &Path) -> anyhow::Result<()> {
-    let output = Command::new(kitty_command)
-        .args([
-            "@",
-            "--to",
-            remote,
-            "launch",
-            "--type=tab",
-            "--no-response",
-            "--cwd",
-        ])
-        .arg(path)
-        .output()
-        .context("while attempting to launch kitty project tab")?;
+    let args: Vec<String> = action
+        .args
+        .iter()
+        .map(|arg| expand_project_template(arg, project))
+        .collect();
+    let cwd = expand_project_template(&action.cwd, project);
+    let mut command = Command::new(&action.command);
+    command.args(args);
 
-    if output.status.success() {
-        Ok(())
-    } else {
-        bail!(
-            "kitty remote launch failed: {}",
-            command_output_message(&output)
-        )
+    if !cwd.trim().is_empty() {
+        command.current_dir(cwd);
     }
-}
 
-fn open_kitty_window(kitty_command: &str, path: &Path) -> anyhow::Result<()> {
-    let mut child = Command::new(kitty_command)
-        .arg("--working-directory")
-        .arg(path)
+    let mut child = command
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
-        .context("while attempting to spawn kitty project window")?;
+        .with_context(|| format!("while attempting to spawn project action {}", action.id))?;
 
     match child
         .try_wait()
-        .context("while attempting to check kitty project window")?
+        .with_context(|| format!("while attempting to check project action {}", action.id))?
     {
         Some(status) if status.success() => Ok(()),
-        Some(status) => bail!("kitty project window exited immediately with {status}"),
+        Some(status) => bail!(
+            "project action {} exited immediately with {status}",
+            action.id
+        ),
         None => {
             thread::spawn(move || {
                 if let Err(err) = child.wait() {
-                    eprintln!("failed to reap kitty project window: {err}");
+                    eprintln!("failed to reap project action: {err}");
                 }
             });
             Ok(())
@@ -342,82 +366,44 @@ fn open_kitty_window(kitty_command: &str, path: &Path) -> anyhow::Result<()> {
     }
 }
 
-fn resolve_kitty_remote(kitty_command: &str, kitty_remote: &str) -> anyhow::Result<Option<String>> {
-    if kitty_remote != "auto" {
-        if kitty_remote.is_empty() {
-            bail!("kitty_remote is empty");
-        }
+fn expand_project_template(template: &str, project: &Project) -> String {
+    template
+        .replace("{{path}}", &project.path.to_string_lossy())
+        .replace("{{title}}", &project.title)
+        .replace("{{root_alias}}", &project.root_alias)
+        .replace(
+            "{{session}}",
+            &project_session_name(&project.path, &project.title),
+        )
+}
 
-        return Ok(Some(kitty_remote.to_string()));
-    }
-
-    let mut candidates = vec![];
-    let entries =
-        fs::read_dir("/tmp").context("while attempting to read /tmp for kitty sockets")?;
-
-    for entry in entries {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(err) => {
-                eprintln!("failed to read /tmp entry while finding kitty socket: {err}");
-                continue;
+fn project_session_name(path: &Path, title: &str) -> String {
+    let hash = stable_path_hash(path);
+    let slug = title
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+                c.to_ascii_lowercase()
+            } else {
+                '-'
             }
-        };
+        })
+        .collect::<String>()
+        .trim_matches('-')
+        .to_string();
+    let slug = if slug.is_empty() { "project" } else { &slug };
 
-        let Some(name) = entry.file_name().to_str().map(|name| name.to_string()) else {
-            continue;
-        };
-
-        if !name.starts_with("kitty-") {
-            continue;
-        }
-
-        let path = entry.path();
-        let Ok(metadata) = entry.metadata() else {
-            continue;
-        };
-
-        if !metadata.file_type().is_socket() {
-            continue;
-        }
-
-        candidates.push(path);
-    }
-
-    candidates.sort();
-    candidates.reverse();
-
-    for path in candidates {
-        let remote = format!("unix:{}", path.display());
-        if kitty_remote_responds(kitty_command, &remote) {
-            return Ok(Some(remote));
-        }
-    }
-
-    Ok(None)
+    format!("rika-{slug}-{hash:08x}")
 }
 
-fn kitty_remote_responds(kitty_command: &str, remote: &str) -> bool {
-    matches!(
-        Command::new(kitty_command)
-            .args(["@", "--to", remote, "ls"])
-            .output(),
-        Ok(output) if output.status.success()
-    )
-}
-
-fn command_output_message(output: &Output) -> String {
-    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-    if !stderr.is_empty() {
-        return format!("{}; stderr: {stderr}", output.status);
+fn stable_path_hash(path: &Path) -> u64 {
+    let mut hash = 0xcbf29ce484222325u64;
+    for byte in path.to_string_lossy().bytes() {
+        hash ^= u64::from(byte);
+        hash = hash.wrapping_mul(0x100000001b3);
     }
 
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if !stdout.is_empty() {
-        return format!("{}; stdout: {stdout}", output.status);
-    }
-
-    output.status.to_string()
+    hash
 }
 
 #[cfg(test)]
@@ -443,13 +429,15 @@ mod tests {
     }
 
     #[test]
-    fn default_config_uses_dev_projects_root_and_kitty() {
+    fn default_config_uses_dev_projects_root_and_actions() {
         let config = ProjectsProviderConfig::default();
 
         assert!(config.enabled);
         assert_eq!(config.roots, vec!["~/dev/projects"]);
-        assert_eq!(config.kitty_command, "kitty");
-        assert_eq!(config.kitty_remote, "auto");
+        assert_eq!(config.default_action, "open_project");
+        assert_eq!(config.actions.len(), 1);
+        assert_eq!(config.actions[0].id, "open_project");
+        assert_eq!(config.actions[0].command, "xdg-open");
     }
 
     #[test]
@@ -481,8 +469,25 @@ mod tests {
         let provider = ProjectsProvider::new(&ProjectsProviderConfig {
             enabled: true,
             roots: vec![root.to_string_lossy().to_string()],
-            kitty_command: "kitty".to_string(),
-            kitty_remote: "auto".to_string(),
+            default_action: "open_terminal".to_string(),
+            actions: vec![
+                ProjectActionConfig {
+                    id: "open_terminal".to_string(),
+                    label: "Open".to_string(),
+                    command: "terminal".to_string(),
+                    args: vec!["{{path}}".to_string()],
+                    icon: "builtin:terminal".to_string(),
+                    cwd: String::new(),
+                },
+                ProjectActionConfig {
+                    id: "open_zellij".to_string(),
+                    label: "Open in Zellij".to_string(),
+                    command: "terminal".to_string(),
+                    args: vec!["zellij".to_string(), "{{session}}".to_string()],
+                    icon: "builtin:terminal".to_string(),
+                    cwd: String::new(),
+                },
+            ],
         });
 
         let empty_results = provider.search("");
@@ -498,6 +503,12 @@ mod tests {
                 .actions
                 .iter()
                 .any(|action| action.id == typed_results[0].default_action)
+        );
+        assert!(
+            typed_results[0]
+                .actions
+                .iter()
+                .any(|action| action.id == "open_zellij")
         );
         assert!(
             typed_results[0]
@@ -541,8 +552,8 @@ mod tests {
                 root_a.to_string_lossy().to_string(),
                 root_b.to_string_lossy().to_string(),
             ],
-            kitty_command: "kitty".to_string(),
-            kitty_remote: "auto".to_string(),
+            default_action: "open_terminal".to_string(),
+            actions: vec![],
         });
 
         let scoped_a = provider.search(&format!("{root_a_name} shared"));
@@ -586,8 +597,8 @@ mod tests {
                 root_a.to_string_lossy().to_string(),
                 root_b.to_string_lossy().to_string(),
             ],
-            kitty_command: "kitty".to_string(),
-            kitty_remote: "auto".to_string(),
+            default_action: "open_terminal".to_string(),
+            actions: vec![],
         });
 
         let results = provider.search("alpha");
@@ -606,8 +617,8 @@ mod tests {
         let provider = ProjectsProvider::new(&ProjectsProviderConfig {
             enabled: true,
             roots: vec![root.to_string_lossy().to_string()],
-            kitty_command: "kitty".to_string(),
-            kitty_remote: "auto".to_string(),
+            default_action: "open_terminal".to_string(),
+            actions: vec![],
         });
 
         // "unknown" doesn't match any root alias, so the full query "unknown myproject" is
@@ -644,17 +655,50 @@ mod tests {
     }
 
     #[test]
-    fn explicit_kitty_remote_is_used_as_is() {
-        let remote =
-            resolve_kitty_remote("kitty", "unix:/tmp/kitty-123").expect("remote should resolve");
+    fn project_session_names_are_stable_and_path_scoped() {
+        let first = project_session_name(Path::new("/tmp/projects/rika"), "rika");
+        let second = project_session_name(Path::new("/tmp/other/rika"), "rika");
+        let repeat = project_session_name(Path::new("/tmp/projects/rika"), "rika");
 
-        assert_eq!(remote.as_deref(), Some("unix:/tmp/kitty-123"));
+        assert_eq!(first, repeat);
+        assert_ne!(first, second);
+        assert!(first.starts_with("rika-rika-"));
     }
 
     #[test]
-    fn empty_kitty_remote_is_rejected() {
-        let err = resolve_kitty_remote("kitty", "").expect_err("empty remote should fail");
+    fn project_action_templates_can_support_editor_commands() {
+        let project = Project {
+            path: PathBuf::from("/tmp/projects/rika"),
+            title: "rika".to_string(),
+            root_alias: "projects".to_string(),
+        };
 
-        assert_eq!(err.to_string(), "kitty_remote is empty");
+        assert_eq!(
+            expand_project_template("zed {{path}}", &project),
+            "zed /tmp/projects/rika"
+        );
+        assert_eq!(
+            expand_project_template("{{title}}:{{root_alias}}:{{session}}", &project),
+            format!(
+                "rika:projects:{}",
+                project_session_name(Path::new("/tmp/projects/rika"), "rika")
+            )
+        );
+    }
+
+    #[test]
+    fn invalid_default_action_falls_back_to_first_configured_action() {
+        let actions = vec![ProjectActionConfig {
+            id: "open_zed".to_string(),
+            label: "Open in Zed".to_string(),
+            command: "zed".to_string(),
+            args: vec!["{{path}}".to_string()],
+            icon: String::new(),
+            cwd: "{{path}}".to_string(),
+        }];
+
+        assert_eq!(valid_default_action("missing", &actions), "open_zed");
+        assert_eq!(valid_default_action("copy_path", &[]), "copy_path");
+        assert_eq!(valid_default_action("missing", &[]), "copy_path");
     }
 }

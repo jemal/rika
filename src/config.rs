@@ -137,8 +137,8 @@ mod tests {
         assert_eq!(config.providers.file_search.max_results, 50);
         assert_eq!(config.providers.files.open_command, "xdg-open");
         assert_eq!(config.providers.projects.roots, vec!["~/dev/projects"]);
-        assert_eq!(config.providers.projects.kitty_command, "kitty");
-        assert_eq!(config.providers.projects.kitty_remote, "auto");
+        assert_eq!(config.providers.projects.default_action, "open_terminal");
+        assert_eq!(config.providers.projects.actions.len(), 2);
     }
 
     #[test]
