@@ -35,6 +35,7 @@ struct Project {
     path: PathBuf,
     title: String,
     root_alias: String,
+    root_path: PathBuf,
 }
 
 pub struct ProjectsProvider {
@@ -132,7 +133,7 @@ impl Provider for ProjectsProvider {
                     kind: ResultKind::Project,
                     section: "Projects".to_string(),
                     title: project.title.clone(),
-                    subtitle: project.root_alias.clone(),
+                    subtitle: project.root_path.to_string_lossy().to_string(),
                     icon: "builtin:folder-git-2".to_string(),
                     score,
                     default_action: self.default_action.clone(),
@@ -232,9 +233,8 @@ fn discover_projects(roots: &[String]) -> Vec<Project> {
 
     for root in roots {
         let root_path = expand_home(root);
+        let root_path = root_path.canonicalize().unwrap_or(root_path);
         let root_alias = root_path
-            .canonicalize()
-            .unwrap_or_else(|_| root_path.clone())
             .file_name()
             .map(|n| n.to_string_lossy().to_string())
             .filter(|n| !n.is_empty())
@@ -297,6 +297,7 @@ fn discover_projects(roots: &[String]) -> Vec<Project> {
                 path,
                 title,
                 root_alias: root_alias.clone(),
+                root_path: root_path.clone(),
             });
         }
     }
@@ -496,6 +497,12 @@ mod tests {
         assert!(empty_results.is_empty());
         assert_eq!(typed_results.len(), 1);
         assert_eq!(typed_results[0].title, "codex");
+        assert_eq!(
+            typed_results[0].subtitle,
+            root.canonicalize()
+                .expect("project root should canonicalize")
+                .to_string_lossy()
+        );
         assert_eq!(typed_results[0].kind, ResultKind::Project);
         assert_eq!(typed_results[0].section, "Projects");
         assert!(
@@ -641,6 +648,7 @@ mod tests {
             path: PathBuf::from("/tmp/root/foo"),
             title: "foo".to_string(),
             root_alias: "root".to_string(),
+            root_path: PathBuf::from("/tmp/root"),
         }];
 
         // "root" alone — no whitespace, falls back to unscoped
@@ -671,6 +679,7 @@ mod tests {
             path: PathBuf::from("/tmp/projects/rika"),
             title: "rika".to_string(),
             root_alias: "projects".to_string(),
+            root_path: PathBuf::from("/tmp/projects"),
         };
 
         assert_eq!(
