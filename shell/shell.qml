@@ -18,6 +18,7 @@ PanelWindow {
   property var results: []
   property var iconWarmResults: []
   property var pendingActions: ({})
+  property var launcherConfig: null
   property int requestId: 0
   property bool primingInitialResults: false
   property string ipcError: ""
@@ -31,6 +32,9 @@ PanelWindow {
   property int windowWidth: 580
   property int windowHeight: 360
   property int windowMargin: 320
+  // qmllint disable missing-property
+  readonly property int systemColorScheme: Qt.styleHints["colorScheme"] ?? Qt.Unknown
+  // qmllint enable missing-property
   readonly property int visibleResultCount: Math.min(filteredResults().length, maxVisibleResults)
   readonly property int panelWidth: Math.max(240, Math.min(width - 48, windowWidth))
   readonly property int panelHeight: Math.max(140, Math.min(height - 96, windowHeight))
@@ -43,17 +47,17 @@ PanelWindow {
     return Math.max(24, Math.min(height - panelHeight - 24, windowMargin));
   }
 
-  readonly property color dimColor: Qt.alpha("#0d0c0c", 0.22)
-  readonly property color surfaceColor: "#181820"
-  readonly property color surfaceVariantColor: "#181820"
-  readonly property color hoverColor: "#2d2b3a"
-  readonly property color outlineColor: Qt.alpha("#54546d", 0.46)
-  readonly property color primaryColor: "#7e9cd8"
-  readonly property color accentColor: "#98bb6c"
-  readonly property color warningColor: "#e6c384"
-  readonly property color errorColor: "#e46876"
-  readonly property color textColor: "#dcd7ba"
-  readonly property color mutedTextColor: "#727169"
+  property color dimColor: Qt.alpha("#0d0c0c", 0.22)
+  property color surfaceColor: "#181820"
+  property color surfaceVariantColor: "#181820"
+  property color hoverColor: "#2d2b3a"
+  property color outlineColor: Qt.alpha("#54546d", 0.46)
+  property color primaryColor: "#7e9cd8"
+  property color accentColor: "#98bb6c"
+  property color warningColor: "#e6c384"
+  property color errorColor: "#e46876"
+  property color textColor: "#dcd7ba"
+  property color mutedTextColor: "#727169"
 
   function sendQuery(text) {
     requestId += 1;
@@ -478,11 +482,13 @@ PanelWindow {
 
     function applyConfig(config) {
       const launcherConfig = config?.launcher;
+      launcher.launcherConfig = launcherConfig;
       const maxVisibleResults = launcherConfig?.max_visible_results;
       const fontFamily = launcherConfig?.font_family;
       const fontSize = launcherConfig?.font_size;
       const smallFontSize = launcherConfig?.small_font_size;
       const tinyFontSize = launcherConfig?.tiny_font_size;
+      const theme = activeTheme();
       const windowConfig = launcherConfig?.window;
       const windowAnchor = windowConfig?.anchor;
       const windowWidth = windowConfig?.width;
@@ -509,6 +515,8 @@ PanelWindow {
         launcher.tinyFontSize = tinyFontSize;
       }
 
+      applyTheme(theme);
+
       if (windowAnchor === "top" || windowAnchor === "center") {
         launcher.windowAnchor = windowAnchor;
       }
@@ -525,7 +533,90 @@ PanelWindow {
         launcher.windowMargin = windowMargin;
       }
     }
+
+    function applyTheme(theme) {
+      if (!theme) {
+        return;
+      }
+
+      applyThemeColor(
+        theme,
+        "dim",
+        "dimColor",
+        themeOpacity(theme, "dim_opacity", 0.22)
+      );
+      applyThemeColor(theme, "surface", "surfaceColor");
+      applyThemeColor(theme, "surface_variant", "surfaceVariantColor");
+      applyThemeColor(theme, "hover", "hoverColor");
+      applyThemeColor(
+        theme,
+        "outline",
+        "outlineColor",
+        themeOpacity(theme, "outline_opacity", 0.46)
+      );
+      applyThemeColor(theme, "primary", "primaryColor");
+      applyThemeColor(theme, "accent", "accentColor");
+      applyThemeColor(theme, "warning", "warningColor");
+      applyThemeColor(theme, "error", "errorColor");
+      applyThemeColor(theme, "text", "textColor");
+      applyThemeColor(theme, "muted_text", "mutedTextColor");
+    }
+
+    function applyThemeColor(theme, configKey, propertyName, alpha) {
+      const value = theme?.[configKey];
+      if (typeof value !== "string" || value.length === 0) {
+        return;
+      }
+
+      launcher[propertyName] = typeof alpha === "number" ? Qt.alpha(value, alpha) : value;
+    }
+
+    function themeOpacity(theme, configKey, fallback) {
+      const value = theme?.[configKey];
+      if (typeof value !== "number" || value < 0 || value > 1) {
+        return fallback;
+      }
+
+      return value;
+    }
+
+    function applyCurrentTheme() {
+      applyTheme(activeTheme());
+    }
+
+    function activeTheme() {
+      const legacyTheme = launcher.launcherConfig?.theme;
+      if (legacyTheme) {
+        return legacyTheme;
+      }
+
+      const themes = launcher.launcherConfig?.themes;
+      const colorScheme = effectiveColorScheme(launcher.launcherConfig?.color_scheme);
+      if (colorScheme === "light" && themes?.light) {
+        return themes.light;
+      }
+
+      if (colorScheme === "dark" && themes?.dark) {
+        return themes.dark;
+      }
+
+      return themes?.dark || themes?.light || null;
+    }
+
+    function effectiveColorScheme(configuredColorScheme) {
+      if (configuredColorScheme === "light" || configuredColorScheme === "dark") {
+        return configuredColorScheme;
+      }
+
+      if (launcher.systemColorScheme === Qt.Light) {
+        return "light";
+      }
+
+      return "dark";
+    }
   }
+
+  onSystemColorSchemeChanged: ipc.applyCurrentTheme()
 
   Timer {
     id: footerStatusTimer
