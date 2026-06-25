@@ -19,6 +19,39 @@ PanelWindow {
   property var iconWarmResults: []
   property var pendingActions: ({})
   property var launcherConfig: null
+  property string desktopColorScheme: ""
+  property var defaultThemes: ({
+    "dark": {
+      "dim": "#0d0c0c",
+      "dim_opacity": 0.22,
+      "surface": "#181820",
+      "surface_variant": "#1f1f28",
+      "hover": "#2a2a37",
+      "outline": "#2a2a37",
+      "outline_opacity": 0.46,
+      "primary": "#7e9cd8",
+      "accent": "#98bb6c",
+      "warning": "#ff9e3b",
+      "error": "#e82424",
+      "text": "#dcd7ba",
+      "muted_text": "#727169"
+    },
+    "light": {
+      "dim": "#1f1f28",
+      "dim_opacity": 0.14,
+      "surface": "#dcd5ac",
+      "surface_variant": "#f2ecbc",
+      "hover": "#b5cbd2",
+      "outline": "#716e61",
+      "outline_opacity": 0.36,
+      "primary": "#4d699b",
+      "accent": "#6f894e",
+      "warning": "#cc6d00",
+      "error": "#e82424",
+      "text": "#545464",
+      "muted_text": "#8a8980"
+    }
+  })
   property int requestId: 0
   property bool primingInitialResults: false
   property string ipcError: ""
@@ -33,7 +66,7 @@ PanelWindow {
   property int windowHeight: 360
   property int windowMargin: 320
   // qmllint disable missing-property
-  readonly property int systemColorScheme: Qt.styleHints["colorScheme"] ?? Qt.Unknown
+  readonly property int systemColorScheme: Qt.styleHints.colorScheme
   // qmllint enable missing-property
   readonly property int visibleResultCount: Math.min(filteredResults().length, maxVisibleResults)
   readonly property int panelWidth: Math.max(240, Math.min(width - 48, windowWidth))
@@ -72,6 +105,20 @@ PanelWindow {
 
   function fetchInitialConfig() {
     ipc.getConfig();
+  }
+
+  function updateDesktopColorScheme(value) {
+    const normalized = value.trim().replace(/^'|'$/g, "");
+
+    if (normalized === "prefer-light") {
+      desktopColorScheme = "light";
+    } else if (normalized === "prefer-dark") {
+      desktopColorScheme = "dark";
+    } else {
+      desktopColorScheme = "";
+    }
+
+    ipc.applyCurrentTheme();
   }
 
   function resolveIconSource(icon) {
@@ -370,6 +417,15 @@ PanelWindow {
   WlrLayershell.exclusionMode: ExclusionMode.Ignore
 
   Component.onCompleted: {
+    gsettingsColorSchemeQuery.exec([
+      "gsettings",
+      "get",
+      "org.gnome.desktop.interface",
+      "color-scheme"
+    ]);
+    gsettingsColorSchemeMonitor.running = true;
+    ipc.applyCurrentTheme();
+
     if (open) {
       panel.focusSearchInput();
       sendQuery(query);
@@ -590,7 +646,7 @@ PanelWindow {
         return legacyTheme;
       }
 
-      const themes = launcher.launcherConfig?.themes;
+      const themes = launcher.launcherConfig?.themes || launcher.defaultThemes;
       const colorScheme = effectiveColorScheme(launcher.launcherConfig?.color_scheme);
       if (colorScheme === "light" && themes?.light) {
         return themes.light;
@@ -608,6 +664,10 @@ PanelWindow {
         return configuredColorScheme;
       }
 
+      if (launcher.desktopColorScheme.length > 0) {
+        return launcher.desktopColorScheme;
+      }
+
       if (launcher.systemColorScheme === Qt.Light) {
         return "light";
       }
@@ -617,6 +677,32 @@ PanelWindow {
   }
 
   onSystemColorSchemeChanged: ipc.applyCurrentTheme()
+  onDesktopColorSchemeChanged: ipc.applyCurrentTheme()
+
+  Process {
+    id: gsettingsColorSchemeQuery
+
+    stdout: SplitParser {
+      splitMarker: "\n"
+      onRead: data => launcher.updateDesktopColorScheme(data)
+    }
+  }
+
+  Process {
+    id: gsettingsColorSchemeMonitor
+
+    command: [
+      "gsettings",
+      "monitor",
+      "org.gnome.desktop.interface",
+      "color-scheme"
+    ]
+
+    stdout: SplitParser {
+      splitMarker: "\n"
+      onRead: data => launcher.updateDesktopColorScheme(data.split(" ").pop())
+    }
+  }
 
   Timer {
     id: footerStatusTimer

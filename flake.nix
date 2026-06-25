@@ -97,6 +97,7 @@
                 --prefix PATH : ${
                   lib.makeBinPath [
                     rika
+                    pkgs.glib
                     pkgs.wl-clipboard
                   ]
                 }
