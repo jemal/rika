@@ -1,0 +1,29 @@
+[dark]
+dim = "#1c1f24"
+dim_opacity = 0.22
+surface = "#282c34"
+surface_variant = "#2c323c"
+hover = "#3e4452"
+outline = "#5c6370"
+outline_opacity = 0.46
+primary = "#61afef"
+accent = "#98c379"
+warning = "#e5c07b"
+error = "#e06c75"
+text = "#abb2bf"
+muted_text = "#5c6370"
+
+[light]
+dim = "#282c34"
+dim_opacity = 0.14
+surface = "#fafafa"
+surface_variant = "#f2f2f2"
+hover = "#e0e0e0"
+outline = "#9e9e9e"
+outline_opacity = 0.36
+primary = "#0061ff"
+accent = "#24a443"
+warning = "#ff6f00"
+error = "#d50000"
+text = "#282c34"
+muted_text = "#5c6370"

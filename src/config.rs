@@ -1,10 +1,16 @@
 use std::io::ErrorKind;
 
-use anyhow::bail;
+use anyhow::{
+    Context,
+    bail,
+};
 use serde::{
     Deserialize,
     Serialize,
 };
+
+const KANAGAWA_THEME_TOML: &str = include_str!("../resources/themes/kanagawa.toml");
+const ONEDARK_THEME_TOML: &str = include_str!("../resources/themes/onedark.toml");
 
 use crate::providers::{
     apps::AppsProviderConfig,
@@ -32,6 +38,7 @@ pub struct Launcher {
     pub small_font_size: u8,
     pub tiny_font_size: u8,
     pub color_scheme: LauncherColorScheme,
+    pub theme_name: String,
     pub themes: LauncherThemes,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub theme: Option<LauncherTheme>,
@@ -47,6 +54,7 @@ impl Default for Launcher {
             small_font_size: 13,
             tiny_font_size: 10,
             color_scheme: LauncherColorScheme::Auto,
+            theme_name: "kanagawa".to_string(),
             themes: LauncherThemes::default(),
             theme: None,
             window: LauncherWindow::default(),
@@ -181,6 +189,41 @@ pub struct Providers {
     pub web_search: WebSearchProviderConfig,
 }
 
+/// Loads a named theme, checking `~/.config/rika/themes/<name>.toml` before
+/// falling back to the themes bundled with rika.
+fn load_named_theme(name: &str) -> anyhow::Result<LauncherThemes> {
+    if let Some(mut theme_path) = dirs::config_dir() {
+        theme_path.push("rika");
+        theme_path.push("themes");
+        theme_path.push(format!("{name}.toml"));
+
+        match std::fs::read_to_string(&theme_path) {
+            Ok(theme_str) => {
+                return toml::from_str(&theme_str).with_context(|| {
+                    format!("while parsing theme file at {}", theme_path.display())
+                });
+            }
+            Err(err) if err.kind() == ErrorKind::NotFound => {}
+            Err(err) => bail!(
+                "failed to read theme file at {}: {err}",
+                theme_path.display()
+            ),
+        }
+    }
+
+    let builtin_theme_toml = match name {
+        "kanagawa" => KANAGAWA_THEME_TOML,
+        "onedark" => ONEDARK_THEME_TOML,
+        other => bail!(
+            "unknown theme \"{other}\": no built-in theme by that name and no \
+             ~/.config/rika/themes/{other}.toml file"
+        ),
+    };
+
+    toml::from_str(builtin_theme_toml)
+        .with_context(|| format!("while parsing built-in theme \"{name}\""))
+}
+
 impl Config {
     pub fn load_config() -> anyhow::Result<Config> {
         let Some(mut config_path) = dirs::config_dir() else {
@@ -201,13 +244,30 @@ impl Config {
             ),
         };
 
-        let config = match serde_json::from_str::<Config>(&config_str) {
+        let raw_config = match serde_json::from_str::<serde_json::Value>(&config_str) {
+            Ok(raw_config) => raw_config,
+            Err(err) => bail!(
+                "failed to parse config file at {}: {err}",
+                config_path.display()
+            ),
+        };
+
+        let explicit_themes = raw_config.pointer("/launcher/themes").is_some();
+
+        let mut config = match serde_json::from_value::<Config>(raw_config) {
             Ok(config) => config,
             Err(err) => bail!(
                 "failed to parse config file at {}: {err}",
                 config_path.display()
             ),
         };
+
+        if !explicit_themes {
+            config.launcher.themes =
+                load_named_theme(&config.launcher.theme_name).with_context(|| {
+                    format!("while loading theme \"{}\"", config.launcher.theme_name)
+                })?;
+        }
 
         Ok(config)
     }
@@ -216,6 +276,36 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn builtin_kanagawa_theme_loads_and_matches_defaults() {
+        let themes = load_named_theme("kanagawa").expect("kanagawa theme should load");
+
+        assert_eq!(themes.dark.primary, LauncherThemes::default().dark.primary);
+        assert_eq!(
+            themes.light.primary,
+            LauncherThemes::default().light.primary
+        );
+    }
+
+    #[test]
+    fn builtin_onedark_theme_loads() {
+        let themes = load_named_theme("onedark").expect("onedark theme should load");
+
+        assert_eq!(themes.dark.primary, "#61afef");
+        assert_eq!(themes.dark.surface, "#282c34");
+        assert_eq!(themes.light.primary, "#0061ff");
+        assert_eq!(themes.light.surface, "#fafafa");
+    }
+
+    #[test]
+    fn unknown_theme_name_is_rejected() {
+        let err = load_named_theme("does-not-exist")
+            .err()
+            .expect("unknown theme should fail to load");
+
+        assert!(err.to_string().contains("unknown theme"));
+    }
 
     #[test]
     fn packaged_config_deserializes() {

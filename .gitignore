@@ -21,6 +21,7 @@
 !resources/bangs.json
 !resources/**/*.svg
 !resources/**/*.json
+!resources/**/*.toml
 
 !shell/
 !shell/**/
