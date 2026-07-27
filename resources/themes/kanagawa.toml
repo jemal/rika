@@ -1,4 +1,3 @@
-[dark]
 dim = "#0d0c0c"
 dim_opacity = 0.22
 surface = "#181820"
@@ -12,18 +11,3 @@ warning = "#ff9e3b"
 error = "#e82424"
 text = "#dcd7ba"
 muted_text = "#727169"
-
-[light]
-dim = "#1f1f28"
-dim_opacity = 0.14
-surface = "#dcd5ac"
-surface_variant = "#f2ecbc"
-hover = "#b5cbd2"
-outline = "#716e61"
-outline_opacity = 0.36
-primary = "#4d699b"
-accent = "#6f894e"
-warning = "#cc6d00"
-error = "#e82424"
-text = "#545464"
-muted_text = "#8a8980"

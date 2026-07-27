@@ -10,7 +10,6 @@ use serde::{
 };
 
 const KANAGAWA_THEME_TOML: &str = include_str!("../resources/themes/kanagawa.toml");
-const ONEDARK_THEME_TOML: &str = include_str!("../resources/themes/onedark.toml");
 
 use crate::providers::{
     apps::AppsProviderConfig,
@@ -38,10 +37,9 @@ pub struct Launcher {
     pub small_font_size: u8,
     pub tiny_font_size: u8,
     pub color_scheme: LauncherColorScheme,
-    pub theme_name: String,
+    pub theme: ThemeSelection,
+    #[serde(skip_deserializing)]
     pub themes: LauncherThemes,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub theme: Option<LauncherTheme>,
     pub window: LauncherWindow,
 }
 
@@ -54,11 +52,26 @@ impl Default for Launcher {
             small_font_size: 13,
             tiny_font_size: 10,
             color_scheme: LauncherColorScheme::Auto,
-            theme_name: "kanagawa".to_string(),
+            theme: ThemeSelection::default(),
             themes: LauncherThemes::default(),
-            theme: None,
             window: LauncherWindow::default(),
         }
+    }
+}
+
+/// A user's choice of theme: either one named theme used for both light and
+/// dark contexts, or a named theme per desktop appearance for people who
+/// want the launcher to follow the system light/dark setting.
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ThemeSelection {
+    Named(String),
+    Split { dark: String, light: String },
+}
+
+impl Default for ThemeSelection {
+    fn default() -> Self {
+        Self::Named("kanagawa".to_string())
     }
 }
 
@@ -191,7 +204,7 @@ pub struct Providers {
 
 /// Loads a named theme, checking `~/.config/rika/themes/<name>.toml` before
 /// falling back to the themes bundled with rika.
-fn load_named_theme(name: &str) -> anyhow::Result<LauncherThemes> {
+fn load_named_theme(name: &str) -> anyhow::Result<LauncherTheme> {
     if let Some(mut theme_path) = dirs::config_dir() {
         theme_path.push("rika");
         theme_path.push("themes");
@@ -213,7 +226,6 @@ fn load_named_theme(name: &str) -> anyhow::Result<LauncherThemes> {
 
     let builtin_theme_toml = match name {
         "kanagawa" => KANAGAWA_THEME_TOML,
-        "onedark" => ONEDARK_THEME_TOML,
         other => bail!(
             "unknown theme \"{other}\": no built-in theme by that name and no \
              ~/.config/rika/themes/{other}.toml file"
@@ -222,6 +234,27 @@ fn load_named_theme(name: &str) -> anyhow::Result<LauncherThemes> {
 
     toml::from_str(builtin_theme_toml)
         .with_context(|| format!("while parsing built-in theme \"{name}\""))
+}
+
+/// Resolves a `ThemeSelection` into a concrete dark/light pair, loading one
+/// named theme (used for both) or two (one per desktop appearance).
+fn resolve_theme_selection(selection: &ThemeSelection) -> anyhow::Result<LauncherThemes> {
+    match selection {
+        ThemeSelection::Named(name) => {
+            let theme = load_named_theme(name)
+                .with_context(|| format!("while loading theme \"{name}\""))?;
+            Ok(LauncherThemes {
+                dark: theme.clone(),
+                light: theme,
+            })
+        }
+        ThemeSelection::Split { dark, light } => Ok(LauncherThemes {
+            dark: load_named_theme(dark)
+                .with_context(|| format!("while loading dark theme \"{dark}\""))?,
+            light: load_named_theme(light)
+                .with_context(|| format!("while loading light theme \"{light}\""))?,
+        }),
+    }
 }
 
 impl Config {
@@ -244,17 +277,7 @@ impl Config {
             ),
         };
 
-        let raw_config = match serde_json::from_str::<serde_json::Value>(&config_str) {
-            Ok(raw_config) => raw_config,
-            Err(err) => bail!(
-                "failed to parse config file at {}: {err}",
-                config_path.display()
-            ),
-        };
-
-        let explicit_themes = raw_config.pointer("/launcher/themes").is_some();
-
-        let mut config = match serde_json::from_value::<Config>(raw_config) {
+        let mut config = match serde_json::from_str::<Config>(&config_str) {
             Ok(config) => config,
             Err(err) => bail!(
                 "failed to parse config file at {}: {err}",
@@ -262,12 +285,8 @@ impl Config {
             ),
         };
 
-        if !explicit_themes {
-            config.launcher.themes =
-                load_named_theme(&config.launcher.theme_name).with_context(|| {
-                    format!("while loading theme \"{}\"", config.launcher.theme_name)
-                })?;
-        }
+        config.launcher.themes = resolve_theme_selection(&config.launcher.theme)
+            .context("while resolving launcher theme")?;
 
         Ok(config)
     }
@@ -279,23 +298,9 @@ mod tests {
 
     #[test]
     fn builtin_kanagawa_theme_loads_and_matches_defaults() {
-        let themes = load_named_theme("kanagawa").expect("kanagawa theme should load");
+        let theme = load_named_theme("kanagawa").expect("kanagawa theme should load");
 
-        assert_eq!(themes.dark.primary, LauncherThemes::default().dark.primary);
-        assert_eq!(
-            themes.light.primary,
-            LauncherThemes::default().light.primary
-        );
-    }
-
-    #[test]
-    fn builtin_onedark_theme_loads() {
-        let themes = load_named_theme("onedark").expect("onedark theme should load");
-
-        assert_eq!(themes.dark.primary, "#61afef");
-        assert_eq!(themes.dark.surface, "#282c34");
-        assert_eq!(themes.light.primary, "#0061ff");
-        assert_eq!(themes.light.surface, "#fafafa");
+        assert_eq!(theme.primary, LauncherTheme::default().primary);
     }
 
     #[test]
@@ -305,6 +310,79 @@ mod tests {
             .expect("unknown theme should fail to load");
 
         assert!(err.to_string().contains("unknown theme"));
+    }
+
+    #[test]
+    fn example_theme_files_parse_as_flat_palettes() {
+        for entry in std::fs::read_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/resources/themes"))
+            .expect("resources/themes should exist")
+        {
+            let path = entry.expect("dir entry should be readable").path();
+            let theme_str = std::fs::read_to_string(&path).expect("theme file should be readable");
+
+            toml::from_str::<LauncherTheme>(&theme_str).unwrap_or_else(|err| {
+                panic!(
+                    "{} should parse as a flat LauncherTheme: {err}",
+                    path.display()
+                )
+            });
+        }
+    }
+
+    #[test]
+    fn theme_selection_deserializes_from_a_bare_string() {
+        let selection: ThemeSelection =
+            serde_json::from_str(r#""kanagawa""#).expect("bare string should deserialize");
+
+        assert!(matches!(selection, ThemeSelection::Named(name) if name == "kanagawa"));
+    }
+
+    #[test]
+    fn theme_selection_deserializes_from_a_dark_light_object() {
+        let selection: ThemeSelection = serde_json::from_str(r#"{"dark": "lua", "light": "sol"}"#)
+            .expect("dark/light object should deserialize");
+
+        assert!(matches!(
+            selection,
+            ThemeSelection::Split { dark, light } if dark == "lua" && light == "sol"
+        ));
+    }
+
+    #[test]
+    fn resolve_theme_selection_named_uses_one_theme_for_both() {
+        let themes = resolve_theme_selection(&ThemeSelection::Named("kanagawa".to_string()))
+            .expect("named theme should resolve");
+
+        assert_eq!(themes.dark.primary, themes.light.primary);
+        assert_eq!(themes.dark.primary, "#7e9cd8");
+    }
+
+    #[test]
+    fn resolve_theme_selection_split_loads_each_name() {
+        let themes = resolve_theme_selection(&ThemeSelection::Split {
+            dark: "kanagawa".to_string(),
+            light: "kanagawa".to_string(),
+        })
+        .expect("split theme should resolve");
+
+        assert_eq!(themes.dark.primary, "#7e9cd8");
+        assert_eq!(themes.light.primary, "#7e9cd8");
+    }
+
+    #[test]
+    fn resolve_theme_selection_rejects_unknown_names() {
+        let err = resolve_theme_selection(&ThemeSelection::Named("does-not-exist".to_string()))
+            .err()
+            .expect("unknown named theme should fail to resolve");
+        assert!(err.to_string().contains("while loading theme"));
+
+        let err = resolve_theme_selection(&ThemeSelection::Split {
+            dark: "does-not-exist".to_string(),
+            light: "kanagawa".to_string(),
+        })
+        .err()
+        .expect("unknown split theme should fail to resolve");
+        assert!(err.to_string().contains("while loading dark theme"));
     }
 
     #[test]
@@ -323,48 +401,14 @@ mod tests {
             config.launcher.color_scheme,
             LauncherColorScheme::Auto
         ));
-        assert_eq!(config.launcher.themes.dark.primary, "#7e9cd8");
-        assert_eq!(config.launcher.themes.dark.text, "#dcd7ba");
-        assert_eq!(config.launcher.themes.dark.surface_variant, "#1f1f28");
-        assert_eq!(config.launcher.themes.dark.warning, "#ff9e3b");
-        assert_eq!(config.launcher.themes.dark.error, "#e82424");
-        assert_eq!(config.launcher.themes.dark.dim_opacity, 0.22);
-        assert_eq!(config.launcher.themes.dark.outline_opacity, 0.46);
-        assert_eq!(config.launcher.themes.light.primary, "#4d699b");
-        assert_eq!(config.launcher.themes.light.surface, "#dcd5ac");
-        assert_eq!(config.launcher.themes.light.hover, "#b5cbd2");
-        assert_eq!(config.launcher.themes.light.outline, "#716e61");
-        assert_eq!(config.launcher.themes.light.outline_opacity, 0.36);
-        assert_eq!(config.launcher.themes.light.warning, "#cc6d00");
-        assert!(config.launcher.theme.is_none());
+        assert!(matches!(
+            config.launcher.theme,
+            ThemeSelection::Named(ref name) if name == "kanagawa"
+        ));
         assert_eq!(config.providers.files.open_command, "xdg-open");
         assert_eq!(config.providers.projects.roots, vec!["~/dev/projects"]);
         assert_eq!(config.providers.projects.default_action, "open_terminal");
         assert_eq!(config.providers.projects.actions.len(), 2);
-    }
-
-    #[test]
-    fn legacy_single_launcher_theme_deserializes() {
-        let config = serde_json::from_str::<Config>(
-            r##"
-{
-  "launcher": {
-    "theme": {
-      "surface": "#ffffff",
-      "text": "#111111",
-      "primary": "#0055aa"
-    }
-  }
-}
-"##,
-        )
-        .expect("legacy theme config should deserialize");
-
-        let theme = config.launcher.theme.expect("legacy theme should be kept");
-        assert_eq!(theme.surface, "#ffffff");
-        assert_eq!(theme.text, "#111111");
-        assert_eq!(theme.primary, "#0055aa");
-        assert_eq!(theme.accent, "#98bb6c");
     }
 
     #[test]

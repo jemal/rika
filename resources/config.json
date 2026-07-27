@@ -6,38 +6,7 @@
     "small_font_size": 13,
     "tiny_font_size": 10,
     "color_scheme": "auto",
-    "themes": {
-      "dark": {
-        "dim": "#0d0c0c",
-        "dim_opacity": 0.22,
-        "surface": "#181820",
-        "surface_variant": "#1f1f28",
-        "hover": "#2a2a37",
-        "outline": "#2a2a37",
-        "outline_opacity": 0.46,
-        "primary": "#7e9cd8",
-        "accent": "#98bb6c",
-        "warning": "#ff9e3b",
-        "error": "#e82424",
-        "text": "#dcd7ba",
-        "muted_text": "#727169"
-      },
-      "light": {
-        "dim": "#1f1f28",
-        "dim_opacity": 0.14,
-        "surface": "#dcd5ac",
-        "surface_variant": "#f2ecbc",
-        "hover": "#b5cbd2",
-        "outline": "#716e61",
-        "outline_opacity": 0.36,
-        "primary": "#4d699b",
-        "accent": "#6f894e",
-        "warning": "#cc6d00",
-        "error": "#e82424",
-        "text": "#545464",
-        "muted_text": "#8a8980"
-      }
-    },
+    "theme": "kanagawa",
     "window": {
       "anchor": "top",
       "width": 580,

@@ -13,7 +13,7 @@ This was built for personal, daily-driver use — not a general-purpose product.
 - **Commands** — user-defined shell commands
 - **Web search** — [Kagi-style bang](https://kagi.com/bangs) prefix search (`!gh`, `!yt`, ...), bundled at build time
 - Usage-ranked results, favorites, and a recents section
-- Light/dark theming that can follow the desktop color scheme (`gsettings`), with themes as plain TOML files (ships with onedark, kanagawa, gruvbox)
+- Light/dark theming that can follow the desktop color scheme (`gsettings`), with themes as plain TOML files (ships with `kanagawa`; `resources/themes/` has more to copy in — `onedark`/`onelight`, `gruvbox_dark_hard`/`gruvbox_light`, `kanagawa_lotus`, `lua`/`sol`)
 
 ## Architecture
 
@@ -44,4 +44,9 @@ nix build .#              # both
 
 ## Configuration
 
-Config lives at `$XDG_CONFIG_HOME/rika/config.json` (falls back to built-in defaults if absent — see [`resources/config.json`](resources/config.json) for the shape). Custom themes go in `$XDG_CONFIG_HOME/rika/themes/<name>.toml`.
+Config lives at `$XDG_CONFIG_HOME/rika/config.json` (falls back to built-in defaults if absent — see [`resources/config.json`](resources/config.json) for the shape). Custom themes go in `$XDG_CONFIG_HOME/rika/themes/<name>.toml`, each a flat set of colors (no light/dark split — a theme file is one palette).
+
+`launcher.theme` picks the theme(s) by name, checking `$XDG_CONFIG_HOME/rika/themes/<name>.toml` before falling back to what's built in (only `kanagawa`). It takes either:
+
+- a single name, used for both light and dark contexts: `"theme": "kanagawa"`
+- a `{dark, light}` pair, to follow the desktop color scheme between two different palettes: `"theme": {"dark": "lua", "light": "sol"}`

@@ -1,0 +1,13 @@
+dim = "#1d2021"
+dim_opacity = 0.14
+surface = "#f9f5d7"
+surface_variant = "#ebdbb2"
+hover = "#d5c4a1"
+outline = "#bdae93"
+outline_opacity = 0.36
+primary = "#076678"
+accent = "#79740e"
+warning = "#b57614"
+error = "#9d0006"
+text = "#3c3836"
+muted_text = "#7c6f64"
