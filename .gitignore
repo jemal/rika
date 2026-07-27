@@ -4,6 +4,7 @@
 
 !.rustfmt.toml
 !AGENTS.md
+!README.md
 
 !flake.nix
 !flake.lock
