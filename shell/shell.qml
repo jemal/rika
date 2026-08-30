@@ -641,11 +641,6 @@ PanelWindow {
     }
 
     function activeTheme() {
-      const legacyTheme = launcher.launcherConfig?.theme;
-      if (legacyTheme) {
-        return legacyTheme;
-      }
-
       const themes = launcher.launcherConfig?.themes || launcher.defaultThemes;
       const colorScheme = effectiveColorScheme(launcher.launcherConfig?.color_scheme);
       if (colorScheme === "light" && themes?.light) {
