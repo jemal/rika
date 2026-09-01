@@ -141,7 +141,9 @@ PanelWindow {
   function handleColorSchemeMonitorLine(data) {
     try {
       const message = JSON.parse(data);
-      if (message.type !== "signal" || message.member !== "SettingChanged") {
+      if (message.type !== "signal"
+          || message.interface !== "org.freedesktop.portal.Settings"
+          || message.member !== "SettingChanged") {
         return;
       }
 
@@ -734,6 +736,8 @@ PanelWindow {
       "busctl",
       "--user",
       "--json=short",
+      "--match",
+      "type='signal',interface='org.freedesktop.portal.Settings',member='SettingChanged'",
       "monitor",
       "org.freedesktop.portal.Desktop"
     ]
