@@ -37,17 +37,9 @@ pub struct Launcher {
     pub small_font_size: u8,
     pub tiny_font_size: u8,
     pub color_scheme: LauncherColorScheme,
-<<<<<<< conflict 1 of 1
-%%%%%%% diff from: tqsmuulo cc696099 "docs: add README.md" (parents of rebased revision)
-\\\\\\\        to: mxvmqppw 04cd2757 "launcher: remove legacyTheme check" (rebase destination)
--    pub theme_name: String,
-+    pub theme: ThemeSelection,
-+    #[serde(skip_deserializing)]
-+++++++ syyzuxts 1f4e849c "launcher: use single-palette theme files with name-based selection" (rebased revision)
     #[serde(skip_serializing)]
     pub theme: ThemeSelection,
     #[serde(skip_deserializing)]
->>>>>>> conflict 1 of 1 ends
     pub themes: LauncherThemes,
     pub window: LauncherWindow,
 }

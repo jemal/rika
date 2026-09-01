@@ -107,18 +107,53 @@ PanelWindow {
     ipc.getConfig();
   }
 
-  function updateDesktopColorScheme(value) {
-    const normalized = value.trim().replace(/^'|'$/g, "");
+  function unwrapVariant(value) {
+    let current = value;
+    while (current && typeof current === "object" && current.type === "v") {
+      current = current.data;
+    }
+    return current;
+  }
 
-    if (normalized === "prefer-light") {
-      desktopColorScheme = "light";
-    } else if (normalized === "prefer-dark") {
+  // org.freedesktop.portal.Settings color-scheme values: 0 = no preference,
+  // 1 = prefer dark, 2 = prefer light.
+  function applyColorSchemePreference(preference) {
+    if (preference === 1) {
       desktopColorScheme = "dark";
+    } else if (preference === 2) {
+      desktopColorScheme = "light";
     } else {
       desktopColorScheme = "";
     }
 
     ipc.applyCurrentTheme();
+  }
+
+  function handleColorSchemeQueryReply(data) {
+    try {
+      const reply = JSON.parse(data);
+      applyColorSchemePreference(unwrapVariant(reply.data[0])?.data);
+    } catch (err) {
+      // Portal unreachable or reply malformed; keep the Qt fallback.
+    }
+  }
+
+  function handleColorSchemeMonitorLine(data) {
+    try {
+      const message = JSON.parse(data);
+      if (message.type !== "signal" || message.member !== "SettingChanged") {
+        return;
+      }
+
+      const [namespace, key, value] = message.payload?.data || [];
+      if (namespace !== "org.freedesktop.appearance" || key !== "color-scheme") {
+        return;
+      }
+
+      applyColorSchemePreference(unwrapVariant(value)?.data);
+    } catch (err) {
+      // Ignore malformed monitor lines.
+    }
   }
 
   function resolveIconSource(icon) {
@@ -417,13 +452,8 @@ PanelWindow {
   WlrLayershell.exclusionMode: ExclusionMode.Ignore
 
   Component.onCompleted: {
-    gsettingsColorSchemeQuery.exec([
-      "gsettings",
-      "get",
-      "org.gnome.desktop.interface",
-      "color-scheme"
-    ]);
-    gsettingsColorSchemeMonitor.running = true;
+    colorSchemeQuery.running = true;
+    colorSchemeMonitor.running = true;
     ipc.applyCurrentTheme();
 
     if (open) {
@@ -675,27 +705,42 @@ PanelWindow {
   onDesktopColorSchemeChanged: ipc.applyCurrentTheme()
 
   Process {
-    id: gsettingsColorSchemeQuery
-
-    stdout: SplitParser {
-      splitMarker: "\n"
-      onRead: data => launcher.updateDesktopColorScheme(data)
-    }
-  }
-
-  Process {
-    id: gsettingsColorSchemeMonitor
+    id: colorSchemeQuery
 
     command: [
-      "gsettings",
-      "monitor",
-      "org.gnome.desktop.interface",
+      "busctl",
+      "--user",
+      "--json=short",
+      "call",
+      "org.freedesktop.portal.Desktop",
+      "/org/freedesktop/portal/desktop",
+      "org.freedesktop.portal.Settings",
+      "Read",
+      "ss",
+      "org.freedesktop.appearance",
       "color-scheme"
     ]
 
     stdout: SplitParser {
       splitMarker: "\n"
-      onRead: data => launcher.updateDesktopColorScheme(data.split(" ").pop())
+      onRead: data => launcher.handleColorSchemeQueryReply(data)
+    }
+  }
+
+  Process {
+    id: colorSchemeMonitor
+
+    command: [
+      "busctl",
+      "--user",
+      "--json=short",
+      "monitor",
+      "org.freedesktop.portal.Desktop"
+    ]
+
+    stdout: SplitParser {
+      splitMarker: "\n"
+      onRead: data => launcher.handleColorSchemeMonitorLine(data)
     }
   }
 
