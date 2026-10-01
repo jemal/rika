@@ -738,8 +738,7 @@ PanelWindow {
       "--json=short",
       "--match",
       "type='signal',interface='org.freedesktop.portal.Settings',member='SettingChanged'",
-      "monitor",
-      "org.freedesktop.portal.Desktop"
+      "monitor"
     ]
 
     stdout: SplitParser {
