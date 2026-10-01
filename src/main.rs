@@ -2,6 +2,7 @@ mod clipboard;
 mod config;
 mod daemon;
 mod ipc;
+mod process;
 mod provider;
 mod providers;
 mod usage;

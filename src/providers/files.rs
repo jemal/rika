@@ -5,17 +5,12 @@ use std::{
         PathBuf,
     },
     process::{
-        Child,
         Command,
         Stdio,
     },
-    thread,
 };
 
-use anyhow::{
-    Context,
-    bail,
-};
+use anyhow::bail;
 use serde::{
     Deserialize,
     Serialize,
@@ -23,6 +18,7 @@ use serde::{
 
 use crate::{
     clipboard,
+    process,
     provider::{
         Provider,
         ResultKind,
@@ -304,34 +300,14 @@ fn spawn_configured_command(command: &str, path: &Path) -> anyhow::Result<()> {
         bail!("command is empty");
     };
 
-    let mut child = Command::new(program)
+    let mut child = Command::new(program);
+    child
         .args(parts)
         .arg(path)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .context("while attempting to spawn file command")?;
-
-    match child
-        .try_wait()
-        .context("while attempting to check file command")?
-    {
-        Some(status) if status.success() => Ok(()),
-        Some(status) => bail!("file command exited immediately with {status}"),
-        None => {
-            reap_child(child);
-            Ok(())
-        }
-    }
-}
-
-fn reap_child(mut child: Child) {
-    thread::spawn(move || {
-        if let Err(err) = child.wait() {
-            eprintln!("failed to reap file command: {err}");
-        }
-    });
+        .stderr(Stdio::null());
+    process::spawn(child, "file command")
 }
 
 #[cfg(test)]

@@ -8,13 +8,9 @@ use std::{
         Command,
         Stdio,
     },
-    thread,
 };
 
-use anyhow::{
-    Context,
-    bail,
-};
+use anyhow::bail;
 use serde::{
     Deserialize,
     Serialize,
@@ -22,6 +18,7 @@ use serde::{
 
 use crate::{
     clipboard,
+    process,
     provider::{
         Provider,
         ResultKind,
@@ -340,31 +337,12 @@ fn run_project_action(action: &ProjectActionConfig, project: &Project) -> anyhow
         command.current_dir(cwd);
     }
 
-    let mut child = command
+    command
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .with_context(|| format!("while attempting to spawn project action {}", action.id))?;
+        .stderr(Stdio::null());
 
-    match child
-        .try_wait()
-        .with_context(|| format!("while attempting to check project action {}", action.id))?
-    {
-        Some(status) if status.success() => Ok(()),
-        Some(status) => bail!(
-            "project action {} exited immediately with {status}",
-            action.id
-        ),
-        None => {
-            thread::spawn(move || {
-                if let Err(err) = child.wait() {
-                    eprintln!("failed to reap project action: {err}");
-                }
-            });
-            Ok(())
-        }
-    }
+    process::spawn(command, format!("project action {}", action.id))
 }
 
 fn expand_project_template(template: &str, project: &Project) -> String {

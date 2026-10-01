@@ -1,7 +1,6 @@
 use std::{
     collections::HashSet,
     process::Command,
-    thread,
 };
 
 use anyhow::{
@@ -21,6 +20,7 @@ use serde::{
 
 use crate::{
     clipboard,
+    process,
     provider::{
         Provider,
         ResultKind,
@@ -170,7 +170,7 @@ impl Provider for AppsProvider {
                     bail!("desktop entry exec is empty: {id}");
                 };
 
-                let mut child = if app.entry.terminal() {
+                if app.entry.terminal() {
                     let term_cmd = self
                         .terminal_command
                         .as_deref()
@@ -187,26 +187,14 @@ impl Provider for AppsProvider {
                         .next()
                         .expect("terminal_command is non-empty after trim");
 
-                    Command::new(term_bin)
-                        .args(parts)
-                        .arg(program)
-                        .args(args)
-                        .spawn()
-                        .context("while attempting to spawn terminal app")?
+                    let mut command = Command::new(term_bin);
+                    command.args(parts).arg(program).args(args);
+                    process::spawn(command, "terminal app")
                 } else {
-                    Command::new(program)
-                        .args(args)
-                        .spawn()
-                        .context("while attempting to spawn desktop app")?
-                };
-
-                thread::spawn(move || {
-                    if let Err(err) = child.wait() {
-                        eprintln!("failed to reap desktop app: {err}");
-                    }
-                });
-
-                Ok(())
+                    let mut command = Command::new(program);
+                    command.args(args);
+                    process::spawn(command, "desktop app")
+                }
             }
             "copy_id" => {
                 let Some(app) = self.apps.iter().find(|app| app.file_name == id) else {

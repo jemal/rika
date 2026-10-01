@@ -1,12 +1,6 @@
-use std::{
-    process::Command as StdCommand,
-    thread,
-};
+use std::process::Command as StdCommand;
 
-use anyhow::{
-    Context,
-    bail,
-};
+use anyhow::bail;
 use serde::{
     Deserialize,
     Serialize,
@@ -14,6 +8,7 @@ use serde::{
 
 use crate::{
     clipboard,
+    process,
     provider::{
         Provider,
         ResultKind,
@@ -98,19 +93,9 @@ impl Provider for CommandsProvider {
                     bail!("command not found: {id}");
                 };
 
-                let mut child = StdCommand::new("sh")
-                    .arg("-c")
-                    .arg(&command.command)
-                    .spawn()
-                    .context("while attempting to spawn command")?;
-
-                thread::spawn(move || {
-                    if let Err(err) = child.wait() {
-                        eprintln!("failed to reap command: {err}");
-                    }
-                });
-
-                Ok(())
+                let mut child_command = StdCommand::new("sh");
+                child_command.arg("-c").arg(&command.command);
+                process::spawn(child_command, "command")
             }
             "copy_command" => {
                 let Some(command) = self.commands.iter().find(|cmd| cmd.name == id) else {

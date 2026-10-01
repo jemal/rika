@@ -1,13 +1,9 @@
 use std::{
     fs,
     process::Command as StdCommand,
-    thread,
 };
 
-use anyhow::{
-    Context,
-    bail,
-};
+use anyhow::bail;
 use serde::{
     Deserialize,
     Serialize,
@@ -15,6 +11,7 @@ use serde::{
 
 use crate::{
     clipboard,
+    process,
     provider::{
         Provider,
         ResultKind,
@@ -222,19 +219,9 @@ impl Provider for WebSearchProvider {
                     bail!("browser_command is empty");
                 };
 
-                let mut child = StdCommand::new(cmd)
-                    .args(parts)
-                    .arg(constructed_url)
-                    .spawn()
-                    .context("while attempting to spawn browser")?;
-
-                thread::spawn(move || {
-                    if let Err(err) = child.wait() {
-                        eprintln!("failed to reap command: {err}");
-                    }
-                });
-
-                Ok(())
+                let mut command = StdCommand::new(cmd);
+                command.args(parts).arg(constructed_url);
+                process::spawn(command, "browser")
             }
             "copy_url" => {
                 let Some((alias, query)) = id.split_once(':') else {
